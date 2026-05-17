@@ -1,0 +1,61 @@
+/* index.css */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600&display=swap');
+
+:root {
+  --sa-teal: #0d9488;
+  --sa-teal-dark: #0f766e;
+  --sa-slate-900: #0f172a;
+  --sa-slate-600: #475569;
+  --sa-card: rgba(255, 255, 255, 0.92);
+}
+
+body {
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--sa-slate-900);
+  background-color: #f8fafc;
+}
+
+.font-display {
+  font-family: 'Fraunces', 'Georgia', serif;
+}
+
+/* Auth & marketing backgrounds */
+.sa-auth-page {
+  background: linear-gradient(145deg, #ecfdf5 0%, #f0fdfa 35%, #e0f2fe 70%, #f8fafc 100%);
+}
+
+.sa-auth-mesh {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(45, 212, 191, 0.25), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 20%, rgba(14, 165, 233, 0.2), transparent 45%),
+    radial-gradient(ellipse 50% 60% at 60% 90%, rgba(16, 185, 129, 0.15), transparent 50%);
+}
+
+.sa-auth-card {
+  background: var(--sa-card);
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.04),
+    0 25px 50px -12px rgba(15, 23, 42, 0.12);
+}
+
+.sa-landing-mesh {
+  background:
+    radial-gradient(ellipse 100% 80% at 50% -20%, rgba(13, 148, 136, 0.2), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 100% 50%, rgba(14, 165, 233, 0.12), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 0% 80%, rgba(52, 211, 153, 0.15), transparent 45%);
+}
+
+.sa-btn-primary {
+  @apply w-full rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-semibold py-3.5 px-4 shadow-lg shadow-teal-900/20 transition hover:from-teal-500 hover:to-emerald-500 hover:shadow-teal-900/25 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2;
+}
+
+.sa-btn-secondary {
+  @apply inline-flex items-center justify-center rounded-xl border-2 border-slate-200 bg-white/80 px-5 py-3 font-semibold text-slate-800 transition hover:border-teal-300 hover:bg-teal-50/80 focus:outline-none focus:ring-2 focus:ring-teal-500/30;
+}

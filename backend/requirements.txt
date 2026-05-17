@@ -1,0 +1,29 @@
+# SmartAgile Django backend
+# Install: pip install -r requirements.txt
+# Python: 3.10, 3.11, or 3.12 (venv recommended — see setup_venv.bat / setup_venv.sh)
+#
+# Pin setuptools<81: djangorestframework-simplejwt uses pkg_resources (removed in setuptools 82+)
+
+Django==3.2.25
+python-dotenv>=1.0.0
+setuptools>=65,<81
+djangorestframework==3.14.0
+djangorestframework-simplejwt>=5.2.0,<5.3
+django-cors-headers==4.3.1
+django-allauth==0.57.2
+
+# Database & media
+psycopg2-binary>=2.9.9
+Pillow>=10.0.0
+
+# Async queue for usage ingestion (optional in dev — CELERY_TASK_ALWAYS_EAGER=true)
+celery>=5.3.0,<6
+redis>=5.0.0,<6
+
+# Assistant (LangGraph + OpenAI-compatible providers)
+langgraph>=0.2,<0.3
+langchain>=0.3
+langchain-core>=0.3
+langchain-openai>=0.2
+
+# Desktop activity tracking runs in ../desktop-agent/ — not installed on the API server.

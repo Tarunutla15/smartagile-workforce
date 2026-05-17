@@ -1,0 +1,13 @@
+# SmartAgile front-end — Node.js dependencies (not installed via pip)
+#
+# Prerequisites: Node.js 18.x or 20.x LTS — https://nodejs.org/
+#
+# Install:
+#   cd front-end
+#   npm install
+#
+# Run:
+#   npm start          → http://localhost:3000
+#
+# Full dependency versions: package.json and package-lock.json
+# Optional env: .env.example → copy to .env.local
