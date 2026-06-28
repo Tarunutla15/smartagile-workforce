@@ -3,6 +3,7 @@
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
+from .insights import canonical_category
 from .models import UsageEvent
 
 MAX_BATCH = 2000
@@ -32,7 +33,10 @@ def normalize_usage_events(raw_list):
         if not name or not isinstance(name, str):
             errors.append(f"event {i}: name is required")
             continue
-        name = name[:512]
+        name = name.strip()[:512]
+        if not name:
+            errors.append(f"event {i}: name is required")
+            continue
         context = item.get("context", "") or ""
         if not isinstance(context, str):
             context = str(context)
@@ -40,7 +44,9 @@ def normalize_usage_events(raw_list):
         category = item.get("category", "") or ""
         if not isinstance(category, str):
             category = str(category)
-        category = category[:128]
+        # Canonicalize at the source so all new rows use one consistent label
+        # (e.g. "work-related" -> "work", "entertainment related" -> "entertainment").
+        category = canonical_category(category)[:128]
         try:
             duration_seconds = float(item.get("duration_seconds", 0))
         except (TypeError, ValueError):

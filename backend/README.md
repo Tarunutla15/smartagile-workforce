@@ -12,7 +12,7 @@ REST API for authentication, usage ingestion, analytics, attendance, tasks/proje
 - Custom user: `accounts.User` (`email` login, `role`: `employee` | `admin`)
 - PostgreSQL (configured in `backend/settings.py`)
 - Celery + Redis (optional; eager mode works without Redis for local dev)
-- LangGraph assistant (`smartagile/assistant_graph/`)
+- LangGraph assistant + analytics agent (`assistant/` app: `graph/`, `brain.py`, `memory.py`, `service/`)
 
 ---
 

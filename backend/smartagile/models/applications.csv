@@ -197,7 +197,6 @@ SolidWorks,C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS\SLDWORKS.exe,work
 Anki,C:\Program Files\Anki\anki.exe,work
 MindManager,C:\Program Files\Mindjet\MindManager 21\MindManager.exe,work
 EndNote,C:\Program Files (x86)\EndNote X9\EndNote.exe,work
-NVivo,C:\Program Files\QSR\NVivo 12\nvivo.exe,work
 Camtasia,C:\Program Files\TechSmith\Camtasia 2021\CamtasiaStudio.exe,work
 Unity,C:\Program Files\Unity\Editor\Unity.exe,work
 AutoCAD,C:\Program Files\Autodesk\AutoCAD 2021\acad.exe,work
@@ -234,7 +233,6 @@ Kdenlive,C:\Program Files\Kdenlive\bin\kdenlive.exe,entertainment
 Lightworks,C:\Program Files\Lightworks\Lightworks.exe,entertainment
 HitFilm Express,C:\Program Files\FXhome\HitFilm Express\HitFilmExpress.exe,entertainment
 Magix Movie Edit Pro,C:\Program Files\MAGIX\Movie Edit Pro Premium\MovieEditPro.exe,entertainment
-Davinci Resolve,C:\Program Files\Blackmagic Design\Davinci Resolve\Resolve.exe,entertainment
 Olive Video Editor,C:\Program Files\Olive\olive.exe,entertainment
 Inkscape,C:\Program Files\Inkscape\inkscape.exe,work
 Affinity Designer,C:\Program Files\Affinity\Designer\designer.exe,work
@@ -294,12 +292,8 @@ Microsoft PowerPoint,C:\Program Files\Microsoft Office\Office365\POWERPNT.EXE,wo
 Microsoft Outlook,C:\Program Files\Microsoft Office\Office365\OUTLOOK.EXE,work
 PDF-XChange Editor,C:\Program Files\Tracker Software\PDF Editor\PDFXEdit.exe,work
 Adobe Lightroom,C:\Program Files\Adobe\Adobe Lightroom Classic\Lightroom.exe,personal
-GIMP,C:\Program Files\GIMP 2\bin\gimp-2.10.exe,personal
-Affinity Photo,C:\Program Files\Affinity\Photo\Photo.exe,personal
 Corel PaintShop Pro,C:\Program Files\Corel\Corel PaintShop Pro 2021\PaintShopPro.exe,personal
 Canva,C:\Program Files (x86)\Canva\Canva.exe,personal
-Procreate,C:\Program Files\Procreate\Procreate.exe,personal
-Krita,C:\Program Files\Krita (x64)\bin\krita.exe,personal
 Autodesk SketchBook,C:\Program Files\Autodesk\Autodesk SketchBook\SketchBook.exe,personal
 Scribus,C:\Program Files\Scribus 1.4.8\Scribus.exe,work
 Microsoft OneNote,C:\Program Files\Microsoft Office\Office365\ONENOTE.EXE,work
@@ -326,7 +320,6 @@ yWriter,C:\Program Files\yWriter6\yWriter6.exe,work
 Storyist,C:\Program Files\Storyist\Storyist.exe,work
 SmartEdit Writer,C:\Program Files\SmartEdit Writer\SmartEdit Writer.exe,work
 WriteItNow,C:\Program Files\WriteItNow 5\WriteItNow5.exe,work
-EViews,C:\Program Files (x86)\EViews 11\EViews11.exe,work
 Gephi,C:\Program Files\Gephi-0.9.2\bin\gephi.exe,work
 GraphPad Prism,C:\Program Files\GraphPad\Prism 9\prism.exe,work
 Mendley Desktop,C:\Program Files (x86)\Mendeley Desktop\MendeleyDesktop.exe,work
@@ -388,14 +381,7 @@ Logger Pro,C:\Program Files\Vernier\Logger Pro 3\LoggerPro.exe,work
 Vernier Graphical Analysis,C:\Program Files\Vernier\Graphical Analysis\GraphicalAnalysis.exe,work
 LabQuest Viewer,C:\Program Files\Vernier\LabQuest Viewer\LabQuestViewer.exe,work
 Microsoft OneNote,C:\Program Files\Microsoft Office\Office16\ONENOTE.EXE,work
-Evernote,C:\Program Files (x86)\Evernote\Evernote.exe,work
-Notion,C:\Program Files\Notion\Notion.exe,work
-Google Keep,C:\Program Files\Google\Keep\GoogleKeep.exe,work
-Bear,C:\Program Files\Bear\Bear.exe,work
 Simplenote,C:\Program Files\Simplenote\Simplenote.exe,work
-Trello,C:\Program Files (x86)\Trello\Trello.exe,work
-Todoist,C:\Program Files\Todoist\Todoist.exe,work
-Microsoft To Do,C:\Program Files\Microsoft To Do\Microsoft To Do.exe,work
 Google Tasks,C:\Program Files\Google Tasks\GoogleTasks.exe,work
 Quip,C:\Program Files\Quip\Quip.exe,work
 Zoho Notebook,C:\Program Files\Zoho Notebook\ZohoNotebook.exe,work
@@ -525,4 +511,124 @@ Konqueror,C:\Program Files\Konqueror\konqueror.exe,personal
 Netscape Navigator,C:\Program Files\Netscape\Navigator\navigator.exe,personal
 DuckDuckGo Privacy Browser,C:\Program Files\DuckDuckGo Privacy Browser\duckduckgo.exe,personal
 Microsoft Internet Explorer,C:\Program Files\Internet Explorer\iexplore.exe,personal
-WhatsApp,C:\Program Files\ApplicationFrameHost.exe,entertainment
+Signal,C:\Users\username\AppData\Local\Programs\signal-desktop\Signal.exe,communication
+Viber,C:\Users\username\AppData\Local\Viber\Viber.exe,communication
+LINE,C:\Program Files (x86)\LINE\bin\LineLauncher.exe,communication
+WeChat,C:\Program Files (x86)\Tencent\WeChat\WeChat.exe,communication
+QQ,C:\Program Files (x86)\Tencent\QQ\Bin\QQ.exe,communication
+Facebook Messenger,C:\Users\username\AppData\Local\Messenger\Messenger.exe,communication
+Snapchat,C:\Users\username\AppData\Local\Snap\Snapchat\Snapchat.exe,communication
+Kik,C:\Users\username\AppData\Local\Kik\Kik.exe,communication
+ICQ,C:\Program Files\ICQ\ICQ.exe,communication
+qTox,C:\Program Files\qTox\qtox.exe,communication
+Wire,C:\Users\username\AppData\Local\Wire\Wire.exe,communication
+Threema,C:\Program Files\Threema\Threema.exe,communication
+Element,C:\Users\username\AppData\Local\Programs\element-desktop\Element.exe,communication
+Mattermost,C:\Program Files\Mattermost\Mattermost.exe,communication
+Rocket.Chat,C:\Users\username\AppData\Local\Programs\rocketchat\Rocket.Chat.exe,communication
+Cisco Webex Teams,C:\Program Files (x86)\Cisco Spark\CiscoCollabHost.exe,communication
+GoToMeeting,C:\Users\username\AppData\Local\GoToMeeting\g2mstart.exe,communication
+RingCentral,C:\Users\username\AppData\Local\Programs\RingCentral\RingCentral.exe,communication
+Jitsi Meet,C:\Users\username\AppData\Local\Programs\jitsi-meet\jitsi-meet.exe,communication
+BlueJeans,C:\Users\username\AppData\Local\BlueJeans\BlueJeans.exe,communication
+Amazon Chime,C:\Program Files\Amazon Chime\Chime.exe,communication
+Google Meet,C:\Users\username\AppData\Local\Google Meet\Meet.exe,communication
+Google Chat,C:\Users\username\AppData\Local\Google Chat\GoogleChat.exe,communication
+Pidgin,C:\Program Files (x86)\Pidgin\pidgin.exe,communication
+Trillian,C:\Program Files (x86)\Trillian\trillian.exe,communication
+Franz,C:\Users\username\AppData\Local\Programs\Franz\Franz.exe,communication
+Rambox,C:\Users\username\AppData\Local\Programs\Rambox\Rambox.exe,communication
+Ferdi,C:\Users\username\AppData\Local\Programs\Ferdi\Ferdi.exe,communication
+Zoiper,C:\Program Files\Zoiper5\Zoiper5.exe,communication
+TeamSpeak,C:\Program Files\TeamSpeak 3 Client\ts3client_win64.exe,communication
+Mumble,C:\Program Files\Mumble\mumble.exe,communication
+Ventrilo,C:\Program Files (x86)\Ventrilo\Ventrilo.exe,communication
+Dialpad,C:\Users\username\AppData\Local\Programs\dialpad\Dialpad.exe,communication
+Symphony,C:\Users\username\AppData\Local\Symphony\Symphony.exe,communication
+Chanty,C:\Users\username\AppData\Local\Programs\Chanty\Chanty.exe,communication
+Twist,C:\Users\username\AppData\Local\Programs\Twist\Twist.exe,communication
+Skype for Business,C:\Program Files\Microsoft Office\root\Office16\lync.exe,communication
+Microsoft Lync,C:\Program Files (x86)\Microsoft Lync\communicator.exe,communication
+Cisco Jabber,C:\Program Files (x86)\Cisco Systems\Cisco Jabber\CiscoJabber.exe,communication
+Avaya one-X Communicator,C:\Program Files (x86)\Avaya\Avaya one-X Communicator\onexcommunicator.exe,communication
+Discord Canary,C:\Users\username\AppData\Local\DiscordCanary\DiscordCanary.exe,communication
+Whereby,C:\Users\username\AppData\Local\Programs\Whereby\Whereby.exe,communication
+Around,C:\Users\username\AppData\Local\Programs\Around\Around.exe,communication
+Google Voice,C:\Users\username\AppData\Local\Google Voice\GoogleVoice.exe,communication
+Workplace from Meta,C:\Users\username\AppData\Local\Workplace\Workplace.exe,communication
+Zalo,C:\Program Files (x86)\Zalo\Zalo.exe,communication
+Slack Enterprise,C:\Users\username\AppData\Local\slack\slack-enterprise.exe,communication
+Webex App,C:\Users\username\AppData\Local\Programs\Cisco Webex\Webex.exe,communication
+MyFitnessPal,C:\Program Files\MyFitnessPal\MyFitnessPal.exe,personal
+Fitbit,C:\Users\username\AppData\Local\Fitbit\Fitbit.exe,personal
+Strava,C:\Users\username\AppData\Local\Strava\Strava.exe,personal
+Garmin Connect,C:\Program Files\Garmin\Connect\GarminConnect.exe,personal
+Samsung Health,C:\Program Files\Samsung\Samsung Health\SHealth.exe,personal
+Google Fit,C:\Users\username\AppData\Local\Google Fit\GoogleFit.exe,personal
+Headspace,C:\Users\username\AppData\Local\Programs\Headspace\Headspace.exe,personal
+Calm,C:\Users\username\AppData\Local\Programs\Calm\Calm.exe,personal
+Sleep Cycle,C:\Program Files\Sleep Cycle\SleepCycle.exe,personal
+Nike Run Club,C:\Program Files\Nike\Run Club\NikeRunClub.exe,personal
+Mint,C:\Program Files\Mint\Mint.exe,personal
+YNAB,C:\Users\username\AppData\Local\YNAB\YNAB.exe,personal
+Quicken,C:\Program Files (x86)\Quicken\qw.exe,personal
+GnuCash,C:\Program Files (x86)\gnucash\bin\gnucash.exe,personal
+Personal Capital,C:\Program Files\Personal Capital\PersonalCapital.exe,personal
+Moneydance,C:\Program Files\Moneydance\Moneydance.exe,personal
+Money Manager Ex,C:\Program Files\Money Manager Ex\mmex.exe,personal
+Banktivity,C:\Program Files\Banktivity\Banktivity.exe,personal
+Instagram,C:\Users\username\AppData\Local\Instagram\Instagram.exe,personal
+Facebook,C:\Users\username\AppData\Local\Facebook\Facebook.exe,personal
+Pinterest,C:\Users\username\AppData\Local\Pinterest\Pinterest.exe,personal
+Twitter,C:\Users\username\AppData\Local\Twitter\Twitter.exe,personal
+Reddit,C:\Users\username\AppData\Local\Reddit\Reddit.exe,personal
+Tumblr,C:\Users\username\AppData\Local\Tumblr\Tumblr.exe,personal
+Mastodon,C:\Users\username\AppData\Local\Programs\Mastodon\Mastodon.exe,personal
+Amazon Shopping,C:\Program Files\Amazon\Amazon Shopping\Amazon.exe,personal
+eBay,C:\Program Files\eBay\eBay.exe,personal
+Etsy,C:\Program Files\Etsy\Etsy.exe,personal
+Booking.com,C:\Program Files\Booking\Booking.exe,personal
+Airbnb,C:\Program Files\Airbnb\Airbnb.exe,personal
+Uber,C:\Program Files\Uber\Uber.exe,personal
+TripAdvisor,C:\Program Files\TripAdvisor\TripAdvisor.exe,personal
+Expedia,C:\Program Files\Expedia\Expedia.exe,personal
+Google Photos,C:\Program Files\Google\Photos\GooglePhotos.exe,personal
+IrfanView,C:\Program Files\IrfanView\i_view64.exe,personal
+Picasa,C:\Program Files (x86)\Google\Picasa3\Picasa3.exe,personal
+1Password,C:\Users\username\AppData\Local\1Password\app\8\1Password.exe,personal
+Bitwarden,C:\Users\username\AppData\Local\Programs\Bitwarden\Bitwarden.exe,personal
+LastPass,C:\Program Files\LastPass\LastPass.exe,personal
+Dashlane,C:\Program Files\Dashlane\Dashlane.exe,personal
+ExpressVPN,C:\Program Files (x86)\ExpressVPN\expressvpn-ui\ExpressVPN.exe,personal
+Surfshark,C:\Program Files\Surfshark\Surfshark.exe,personal
+CyberGhost,C:\Program Files\CyberGhost 8\CyberGhost.exe,personal
+ProtonVPN,C:\Program Files\Proton Technologies\ProtonVPN\ProtonVPN.exe,personal
+OneDrive,C:\Users\username\AppData\Local\Microsoft\OneDrive\OneDrive.exe,personal
+iCloud,C:\Program Files\Common Files\Apple\Internet Services\iCloud.exe,personal
+MEGAsync,C:\Program Files\MEGAsync\MEGAsync.exe,personal
+pCloud,C:\Program Files\pCloud\pCloud.exe,personal
+Box,C:\Program Files\Box\Box\Box.exe,personal
+Sync.com,C:\Users\username\AppData\Local\Sync\Sync.exe,personal
+Weather,C:\Program Files\Microsoft\BingWeather\Weather.exe,personal
+Google Maps,C:\Program Files\Google\Maps\GoogleMaps.exe,personal
+Audible,C:\Users\username\AppData\Local\Audible\Audible.exe,personal
+Kindle,C:\Program Files (x86)\Amazon\Kindle\Kindle.exe,personal
+Goodreads,C:\Program Files\Goodreads\Goodreads.exe,personal
+Tinder,C:\Users\username\AppData\Local\Tinder\Tinder.exe,personal
+Bumble,C:\Users\username\AppData\Local\Bumble\Bumble.exe,personal
+Netflix,C:\Program Files\Netflix\Netflix.exe,entertainment
+Disney Plus,C:\Program Files\DisneyPlus\DisneyPlus.exe,entertainment
+Hulu,C:\Program Files\Hulu\Hulu.exe,entertainment
+Amazon Prime Video,C:\Program Files\Amazon\Prime Video\PrimeVideo.exe,entertainment
+HBO Max,C:\Program Files\HBO Max\HBOMax.exe,entertainment
+YouTube,C:\Users\username\AppData\Local\YouTube\YouTube.exe,entertainment
+Twitch,C:\Users\username\AppData\Local\Twitch\Twitch.exe,entertainment
+Plex,C:\Program Files\Plex\Plex\Plex.exe,entertainment
+Kodi,C:\Program Files\Kodi\kodi.exe,entertainment
+Epic Games Launcher,C:\Program Files (x86)\Epic Games\Launcher\Portal\Binaries\Win64\EpicGamesLauncher.exe,entertainment
+Battle.net,C:\Program Files (x86)\Battle.net\Battle.net.exe,entertainment
+EA Origin,C:\Program Files (x86)\Origin\Origin.exe,entertainment
+GOG Galaxy,C:\Program Files (x86)\GOG Galaxy\GalaxyClient.exe,entertainment
+Riot Client,C:\Riot Games\Riot Client\RiotClientServices.exe,entertainment
+Ubisoft Connect,C:\Program Files (x86)\Ubisoft\Ubisoft Game Launcher\UbisoftConnect.exe,entertainment
+TikTok,C:\Users\username\AppData\Local\TikTok\TikTok.exe,entertainment

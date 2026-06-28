@@ -26,5 +26,5 @@ urlpatterns = [
         UsageEventBatchIngestView.as_view(),
         name='usage_events_batch',
     ),
-    path("assistant/", include("smartagile.assistant_service.urls")),
+    path("assistant/", include("assistant.service.urls")),
 ]

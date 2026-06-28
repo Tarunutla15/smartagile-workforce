@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'accounts',
     'smartagile',
+    'assistant',
     'tasks',
     'corsheaders',
     'allauth',

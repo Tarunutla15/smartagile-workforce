@@ -470,6 +470,40 @@ def snapshot_and_reset_counts():
 
 
 PERIODIC_FLUSH_SEC = 60
+# Idle inside a segment beyond this many seconds is treated as "away" and NOT counted.
+# Active windows refresh input well within this, so normal usage is unaffected.
+ACTIVE_IDLE_GRACE_SEC = 15
+# A healthy loop flushes within ~PERIODIC_FLUSH_SEC. Anything much larger means the
+# process was suspended/stalled (sleep, hibernate, thread starvation): clamp it so a
+# multi-hour gap is never attributed to a single window.
+MAX_SEGMENT_SEC = PERIODIC_FLUSH_SEC + 10
+# Skip near-zero segments (rapid window flips / fully-idle periods) to avoid noise rows.
+MIN_SEGMENT_SEC = 1.0
+
+
+def _effective_duration(raw_spent, idle_seconds):
+    """
+    Convert raw foreground wall-time into *active* seconds:
+    1) clamp runaway gaps (sleep/stall) to MAX_SEGMENT_SEC,
+    2) drop idle time beyond ACTIVE_IDLE_GRACE_SEC ("away" time).
+    """
+    raw_spent = max(0.0, float(raw_spent))
+    idle_in_seg = min(raw_spent, max(0.0, float(idle_seconds)))
+    spent = min(raw_spent, MAX_SEGMENT_SEC)
+    away = max(0.0, idle_in_seg - ACTIVE_IDLE_GRACE_SEC)
+    return max(0.0, spent - away)
+
+
+def _stable_app_name(app_name, task_raw):
+    """
+    Prefer a stable name from the executable (e.g. Cursor.exe -> "Cursor") so the same
+    app never fragments across window-title variants. Fall back to the title suffix.
+    """
+    base = os.path.basename((app_name or "").replace("/", "\\"))
+    stem = os.path.splitext(base)[0].strip()
+    if stem and not stem.lower().startswith("pid:"):
+        return stem
+    return (task_raw or "").split("-")[-1].strip() or "Unknown"
 
 
 def track_application_usage(user_id):
@@ -542,7 +576,8 @@ def track_application_usage(user_id):
             software_name = exe_to_software.get(browser_name.lower(), "Unknown Software")
             predicted_category = svm_model.predict([task_raw])[0]
             if software_name == "Unknown Software":
-                software_name = task_raw.split("-")[-1]
+                software_name = _stable_app_name(app_name, task_raw)
+            software_name = (software_name or "").strip() or "Unknown"
             ev = {
                 "source_type": "browser",
                 "name": software_name,
@@ -565,7 +600,8 @@ def track_application_usage(user_id):
             predicted_category = rf_model.predict(input_data)[0]
             software_name = exe_to_software.get(_exe_lookup_key(app_name), "Unknown Software")
             if software_name == "Unknown Software":
-                software_name = task_raw.split("-")[-1]
+                software_name = _stable_app_name(app_name, task_raw)
+            software_name = (software_name or "").strip() or "Unknown"
             ev = {
                 "source_type": "application",
                 "name": software_name,
@@ -611,42 +647,42 @@ def track_application_usage(user_id):
 
             if current_key != previous_key:
                 if previous_window is not None:
-                    end_time = time.time()
-                    time_spent = end_time - start_time
-                    idle_time = _seconds_since_last_input()
-                    idle_time = min(time_spent, float(idle_time))
-                    ks, cl, sc = snapshot_and_reset_counts()
-                    enqueue_usage_segment(
-                        previous_window,
-                        time_spent,
-                        idle_time,
-                        ks,
-                        cl,
-                        sc,
-                        True,
-                    )
+                    raw_spent = time.time() - start_time
+                    idle_raw = _seconds_since_last_input()
+                    effective = _effective_duration(raw_spent, idle_raw)
+                    ks, cl, sc = snapshot_and_reset_counts()  # always reset (don't bleed into next)
+                    if effective >= MIN_SEGMENT_SEC:
+                        enqueue_usage_segment(
+                            previous_window,
+                            effective,
+                            min(effective, float(idle_raw)),
+                            ks,
+                            cl,
+                            sc,
+                            True,
+                        )
 
                 previous_window = active_window
                 previous_key = current_key
                 start_time = time.time()
 
             elif previous_window is not None and (time.time() - start_time) >= PERIODIC_FLUSH_SEC:
-                end_time = time.time()
-                time_spent = end_time - start_time
-                if time_spent >= 1.0:
-                    idle_time = _seconds_since_last_input()
-                    idle_time = min(time_spent, float(idle_time))
-                    ks, cl, sc = snapshot_and_reset_counts()
+                raw_spent = time.time() - start_time
+                idle_raw = _seconds_since_last_input()
+                effective = _effective_duration(raw_spent, idle_raw)
+                ks, cl, sc = snapshot_and_reset_counts()
+                if effective >= MIN_SEGMENT_SEC:
                     enqueue_usage_segment(
                         previous_window,
-                        time_spent,
-                        idle_time,
+                        effective,
+                        min(effective, float(idle_raw)),
                         ks,
                         cl,
                         sc,
                         False,
                     )
-                    start_time = time.time()
+                # Always advance the window so sustained idle does not keep growing one segment.
+                start_time = time.time()
 
     except Exception as e:
         print(f"Exception occurred: {e}")

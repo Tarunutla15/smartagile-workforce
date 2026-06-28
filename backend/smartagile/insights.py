@@ -4,18 +4,45 @@ Intelligence layer: features from UsageEvent + rule-based + statistical insights
 
 from __future__ import annotations
 
+import re
 import statistics
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from datetime import date, timedelta
 from typing import Any
 
-from django.db.models import Q, Sum
+from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncDate, TruncWeek
 from django.utils import timezone
 
 from .models import UsageEvent, UsageDailyRollup
 
-WORK_Q = Q(category__iexact="work") | Q(category__iexact="work-related")
+
+def canonical_category(value: str | None) -> str:
+    """
+    Collapse the desktop ML classifier's noisy category labels into one canonical form.
+
+    Handles separator + qualifier variants so they aggregate together, e.g.:
+      "work", "work-related", "Work Related"          -> "work"
+      "entertainment related", "entertainment-related" -> "entertainment"
+    Empty / missing categories return "" (callers display them as "uncategorized").
+    """
+    s = (value or "").strip().lower()
+    if not s:
+        return ""
+    s = s.replace("_", " ").replace("-", " ")
+    s = re.sub(r"\s+", " ", s).strip()
+    s = re.sub(r"\s*related$", "", s).strip()  # drop trailing "related" qualifier
+    return s
+
+
+# Categories the desktop ML classifier treats as focused work. We match the raw variants
+# in SQL (WORK_Q) and the canonical form ("work") when aggregating in Python.
+WORK_Q = (
+    Q(category__iexact="work")
+    | Q(category__iexact="work-related")
+    | Q(category__iexact="work related")
+)
 
 
 @dataclass
@@ -108,18 +135,10 @@ def compute_features_from_events_window(
     )
 
 
-def compute_app_activity_detail(
-    user_id: int, d: date, *, top_pairs: int = 12, top_apps: int = 12
+def _app_activity_from_rows(
+    rows: list[dict[str, Any]], *, top_pairs: int, top_apps: int
 ) -> dict[str, Any]:
-    """
-    Per-day app usage: most common A→B context switches and per-app time / open counts.
-    """
-    base = UsageEvent.objects.filter(user_id=user_id, occurred_at__date=d)
-    rows = list(
-        base.order_by("occurred_at", "id").values(
-            "name", "source_type", "duration_seconds"
-        )
-    )
+    """Shared aggregation for app-activity detail (used by day + window variants)."""
     if not rows:
         return {
             "top_switch_pairs": [],
@@ -179,6 +198,108 @@ def compute_app_activity_detail(
     }
 
 
+def _ordered_activity_rows(base) -> list[dict[str, Any]]:
+    return list(
+        base.order_by("occurred_at", "id").values("name", "source_type", "duration_seconds")
+    )
+
+
+def compute_app_activity_detail(
+    user_id: int, d: date, *, top_pairs: int = 12, top_apps: int = 12
+) -> dict[str, Any]:
+    """Per-day app usage: most common A→B context switches and per-app time / open counts."""
+    base = UsageEvent.objects.filter(user_id=user_id, occurred_at__date=d)
+    return _app_activity_from_rows(
+        _ordered_activity_rows(base), top_pairs=top_pairs, top_apps=top_apps
+    )
+
+
+def compute_app_activity_detail_window(
+    user_id: int, *, since_dt, until_dt, top_pairs: int = 12, top_apps: int = 12
+) -> dict[str, Any]:
+    """Same as compute_app_activity_detail, but over an arbitrary [since_dt, until_dt) window."""
+    base = UsageEvent.objects.filter(
+        user_id=user_id, occurred_at__gte=since_dt, occurred_at__lt=until_dt
+    )
+    return _app_activity_from_rows(
+        _ordered_activity_rows(base), top_pairs=top_pairs, top_apps=top_apps
+    )
+
+
+def compute_time_on_app_window(
+    user_id: int, app_name: str, *, since_dt, until_dt
+) -> dict[str, Any]:
+    """
+    Total time + open count for ONE app/software over a window.
+
+    Matches `name` case-insensitively: exact match first, then falls back to substring
+    (so "vs code" finds "Visual Studio Code"). Returns matched=False when nothing is found.
+    """
+    name = (app_name or "").strip()
+    base = UsageEvent.objects.filter(
+        user_id=user_id, occurred_at__gte=since_dt, occurred_at__lt=until_dt
+    )
+    if not name:
+        return {"query_name": name, "matched": False, "duration_seconds": 0.0, "open_count": 0}
+
+    exact = base.filter(name__iexact=name)
+    qs = exact if exact.exists() else base.filter(name__icontains=name)
+    dur = float(qs.aggregate(s=Sum("duration_seconds"))["s"] or 0)
+    opens = qs.count()
+    resolved = qs.values_list("name", flat=True).first() or name
+    return {
+        "query_name": name,
+        "app_name": resolved,
+        "matched": opens > 0,
+        "duration_seconds": round(dur, 2),
+        "open_count": int(opens),
+    }
+
+
+def _browser_pages_from_rows(
+    rows: list[dict[str, Any]],
+    *,
+    browser_name: str | None,
+    top_pages: int,
+    rank_by: str = "duration",
+) -> dict[str, Any]:
+    """Shared aggregation for browser "page title" detail (day + window variants)."""
+    if not rows:
+        return {"browser_name": browser_name, "most_time_in_pages": []}
+
+    dur: dict[str, float] = defaultdict(float)
+    opens: dict[str, int] = defaultdict(int)
+    for r in rows:
+        title = (r.get("context") or "").strip()
+        if not title:
+            continue
+        title = title[:256]
+        dur[title] += float(r.get("duration_seconds") or 0)
+        opens[title] += 1
+
+    if rank_by == "open_count":
+        sort_key = lambda k: (-opens[k], -dur[k], k)  # noqa: E731
+    else:
+        sort_key = lambda k: (-dur[k], -opens[k], k)  # noqa: E731
+    top = sorted(dur.keys(), key=sort_key)[: max(1, min(int(top_pages), 50))]
+    return {
+        "browser_name": (browser_name or rows[0].get("name") or "").strip() or None,
+        "most_time_in_pages": [
+            {"title": k, "duration_seconds": round(dur[k], 2), "open_count": int(opens[k])}
+            for k in top
+        ],
+    }
+
+
+def _browser_base(user_id: int, browser_name: str | None):
+    base = UsageEvent.objects.filter(
+        user_id=user_id, source_type=UsageEvent.SourceType.BROWSER
+    )
+    if browser_name:
+        base = base.filter(name__iexact=str(browser_name).strip())
+    return base
+
+
 def compute_browser_page_activity_detail(
     user_id: int,
     d: date,
@@ -195,43 +316,251 @@ def compute_browser_page_activity_detail(
       - context = normalized window/tab title (NOT a URL)
     - Therefore this returns "page titles" rather than strict website URLs.
     """
-    base = UsageEvent.objects.filter(
-        user_id=user_id,
-        occurred_at__date=d,
-        source_type=UsageEvent.SourceType.BROWSER,
-    )
-    if browser_name:
-        base = base.filter(name__iexact=str(browser_name).strip())
-
+    base = _browser_base(user_id, browser_name).filter(occurred_at__date=d)
     rows = list(base.values("name", "context", "duration_seconds").order_by("occurred_at", "id"))
-    if not rows:
-        return {"browser_name": browser_name, "most_time_in_pages": []}
+    return _browser_pages_from_rows(rows, browser_name=browser_name, top_pages=top_pages)
 
-    from collections import defaultdict
 
-    dur: dict[str, float] = defaultdict(float)
-    opens: dict[str, int] = defaultdict(int)
-    for r in rows:
-        title = (r.get("context") or "").strip()
-        if not title:
-            continue
-        title = title[:256]
-        dur[title] += float(r.get("duration_seconds") or 0)
-        opens[title] += 1
+def compute_browser_page_activity_detail_window(
+    user_id: int,
+    *,
+    since_dt,
+    until_dt,
+    browser_name: str | None = None,
+    top_pages: int = 15,
+    rank_by: str = "duration",
+) -> dict[str, Any]:
+    """Same as compute_browser_page_activity_detail, over [since_dt, until_dt)."""
+    base = _browser_base(user_id, browser_name).filter(
+        occurred_at__gte=since_dt, occurred_at__lt=until_dt
+    )
+    rows = list(base.values("name", "context", "duration_seconds").order_by("occurred_at", "id"))
+    return _browser_pages_from_rows(
+        rows, browser_name=browser_name, top_pages=top_pages, rank_by=rank_by
+    )
 
-    keys = list(dur.keys())
-    keys.sort(key=lambda k: (-dur[k], -opens[k], k))
-    top = keys[: max(1, min(int(top_pages), 50))]
+
+def compute_time_on_site_window(
+    user_id: int,
+    site_query: str,
+    *,
+    since_dt,
+    until_dt,
+    browser_name: str | None = None,
+) -> dict[str, Any]:
+    """
+    Total time + visit count for a website/page over a window, matched by substring on
+    the page TITLE (UsageEvent.context). Titles are not guaranteed URLs.
+    """
+    q = (site_query or "").strip()
+    if not q:
+        return {"query": q, "matched": False, "duration_seconds": 0.0, "open_count": 0, "sample_titles": []}
+
+    base = _browser_base(user_id, browser_name).filter(
+        occurred_at__gte=since_dt, occurred_at__lt=until_dt, context__icontains=q
+    )
+    dur = float(base.aggregate(s=Sum("duration_seconds"))["s"] or 0)
+    opens = base.count()
+    sample = (
+        base.values("context")
+        .annotate(d=Sum("duration_seconds"))
+        .order_by("-d")
+        .values_list("context", flat=True)[:5]
+    )
     return {
-        "browser_name": (browser_name or rows[0].get("name") or "").strip() or None,
-        "most_time_in_pages": [
-            {
-                "title": k,
-                "duration_seconds": round(dur[k], 2),
-                "open_count": int(opens[k]),
-            }
-            for k in top
-        ],
+        "query": q,
+        "matched": opens > 0,
+        "duration_seconds": round(dur, 2),
+        "open_count": int(opens),
+        "sample_titles": [s[:256] for s in sample if s],
+    }
+
+
+# Canonical categories treated as focused work (see canonical_category / WORK_Q).
+_WORK_CATEGORIES = {"work"}
+
+
+def compute_category_breakdown_window(
+    user_id: int,
+    *,
+    since_dt,
+    until_dt,
+    top: int = 10,
+) -> dict[str, Any]:
+    """
+    Time-per-category over a window (work vs distraction split + ranked categories).
+
+    Categories come from UsageEvent.category (populated by the desktop ML models) and are
+    canonicalized here so noisy variants ("work" / "work-related", "entertainment related" /
+    "entertainment-related") merge into a single bucket. Empty -> "uncategorized".
+    """
+    base = UsageEvent.objects.filter(
+        user_id=user_id, occurred_at__gte=since_dt, occurred_at__lt=until_dt
+    )
+    merged: dict[str, dict[str, float]] = defaultdict(lambda: {"dur": 0.0, "n": 0})
+    for r in base.values("category").annotate(dur=Sum("duration_seconds"), n=Count("id")):
+        name = canonical_category(r["category"]) or "uncategorized"
+        merged[name]["dur"] += float(r["dur"] or 0)
+        merged[name]["n"] += int(r["n"] or 0)
+
+    total = sum(v["dur"] for v in merged.values())
+    work = sum(v["dur"] for k, v in merged.items() if k in _WORK_CATEGORIES)
+    distracted = max(0.0, total - work)
+
+    cats = [
+        {
+            "category": k,
+            "duration_seconds": round(v["dur"], 2),
+            "event_count": int(v["n"]),
+            "share": round(v["dur"] / total, 4) if total > 0 else 0.0,
+        }
+        for k, v in merged.items()
+    ]
+    cats.sort(key=lambda c: (-c["duration_seconds"], c["category"]))
+    return {
+        "total_duration_seconds": round(total, 2),
+        "work_duration_seconds": round(work, 2),
+        "distracted_duration_seconds": round(distracted, 2),
+        "focus_score": round(work / total, 4) if total > 0 else None,
+        "categories": cats[: max(1, min(int(top), 25))],
+    }
+
+
+def compute_top_apps_split_window(
+    user_id: int, *, since_dt, until_dt, top: int = 5
+) -> dict[str, Any]:
+    """Top apps by time, split into focused-work vs distraction (used by `explain`)."""
+    base = UsageEvent.objects.filter(
+        user_id=user_id, occurred_at__gte=since_dt, occurred_at__lt=until_dt
+    )
+
+    def _rows(qs):
+        out = []
+        for r in (
+            qs.values("name")
+            .annotate(s=Sum("duration_seconds"), n=Count("id"))
+            .order_by("-s")[: max(1, min(int(top), 10))]
+        ):
+            out.append(
+                {"name": r["name"], "duration_seconds": round(float(r["s"] or 0), 2),
+                 "open_count": int(r["n"] or 0)}
+            )
+        return out
+
+    return {"work_apps": _rows(base.filter(WORK_Q)), "distraction_apps": _rows(base.exclude(WORK_Q))}
+
+
+def _trend_direction(values: list[float | None], *, eps: float) -> tuple[float | None, str]:
+    """Least-squares slope over non-null points -> (slope_per_bucket, up|down|flat)."""
+    pts = [(i, v) for i, v in enumerate(values) if v is not None]
+    if len(pts) < 2:
+        return None, "flat"
+    n = len(pts)
+    sx = sum(i for i, _ in pts)
+    sy = sum(v for _, v in pts)
+    sxx = sum(i * i for i, _ in pts)
+    sxy = sum(i * v for i, v in pts)
+    denom = n * sxx - sx * sx
+    if denom == 0:
+        return None, "flat"
+    slope = (n * sxy - sx * sy) / denom
+    direction = "flat" if abs(slope) < eps else ("up" if slope > 0 else "down")
+    return round(slope, 4), direction
+
+
+def compute_metric_trend(
+    user_id: int,
+    *,
+    since_dt,
+    until_dt,
+    base_metric: str = "focus",
+    bucket: str = "day",
+    app_name: str | None = None,
+    site_query: str | None = None,
+    max_points: int = 60,
+) -> dict[str, Any]:
+    """
+    Bucketed time series for a metric over a window.
+
+    base_metric: focus | work_time | total_time | time_on_app | time_on_site
+    bucket: "day" (TruncDate) or "week" (TruncWeek). Values are duration seconds, except
+    focus which is a 0..1 ratio (work/total) per bucket.
+    """
+    bm = (base_metric or "focus").strip()
+    trunc = TruncWeek if bucket == "week" else TruncDate
+    base = UsageEvent.objects.filter(
+        user_id=user_id, occurred_at__gte=since_dt, occurred_at__lt=until_dt
+    )
+
+    if bm == "time_on_app" and app_name:
+        nm = app_name.strip()
+        exact = base.filter(name__iexact=nm)
+        base = exact if exact.exists() else base.filter(name__icontains=nm)
+    elif bm == "time_on_site" and site_query:
+        base = base.filter(
+            source_type=UsageEvent.SourceType.BROWSER, context__icontains=site_query.strip()
+        )
+
+    totals: dict[Any, float] = {}
+    for row in (
+        base.annotate(b=trunc("occurred_at")).values("b").annotate(s=Sum("duration_seconds")).order_by("b")
+    ):
+        totals[row["b"]] = float(row["s"] or 0)
+
+    works: dict[Any, float] = {}
+    if bm in ("focus", "focus_summary", "focus_score", "work_time", "work"):
+        for row in (
+            base.filter(WORK_Q).annotate(b=trunc("occurred_at")).values("b").annotate(s=Sum("duration_seconds"))
+        ):
+            works[row["b"]] = float(row["s"] or 0)
+
+    is_focus = bm in ("focus", "focus_summary", "focus_score")
+    unit = "ratio" if is_focus else "seconds"
+    keys = sorted(totals.keys())
+    if len(keys) > max_points:
+        keys = keys[-max_points:]
+
+    points: list[dict[str, Any]] = []
+    for b in keys:
+        if is_focus:
+            t = totals.get(b, 0.0)
+            v = round(works.get(b, 0.0) / t, 4) if t > 0 else None
+        elif bm in ("work_time", "work"):
+            v = round(works.get(b, 0.0), 2)
+        else:  # total_time / time_on_app / time_on_site
+            v = round(totals.get(b, 0.0), 2)
+        points.append({"bucket": b.isoformat() if hasattr(b, "isoformat") else str(b), "value": v})
+
+    values = [p["value"] for p in points]
+    non_null = [v for v in values if v is not None]
+    eps = 0.005 if is_focus else 30.0
+    slope, direction = _trend_direction(values, eps=eps)
+
+    def _peak(reverse: bool):
+        cand = [(p["bucket"], p["value"]) for p in points if p["value"] is not None]
+        if not cand:
+            return None
+        return sorted(cand, key=lambda kv: kv[1], reverse=reverse)[0][0]
+
+    summary = {
+        "first": non_null[0] if non_null else None,
+        "last": non_null[-1] if non_null else None,
+        "min": min(non_null) if non_null else None,
+        "max": max(non_null) if non_null else None,
+        "avg": round(sum(non_null) / len(non_null), 4) if non_null else None,
+        "slope_per_bucket": slope,
+        "direction": direction,
+        "min_bucket": _peak(reverse=False),
+        "max_bucket": _peak(reverse=True),
+    }
+    return {
+        "base_metric": bm,
+        "unit": unit,
+        "bucket": bucket,
+        "app_name": app_name,
+        "site_query": site_query,
+        "points": points,
+        "summary": summary,
     }
 
 
