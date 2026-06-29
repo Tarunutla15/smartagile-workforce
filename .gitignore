@@ -27,6 +27,9 @@ front-end/.env.production.local
 # Desktop agent
 desktop-agent/.venv/
 desktop-agent/__pycache__/
+desktop-agent/build/
+desktop-agent/dist/
+desktop-agent/*.spec.bak
 
 # Secrets & local auth
 **/auth.json

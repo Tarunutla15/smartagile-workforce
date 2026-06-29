@@ -161,6 +161,48 @@ def run_usage_daily_rollup(target_date_iso=None):
 
 
 @shared_task
+def send_scheduled_usage_digests(frequency: str):
+    """
+    Scheduling agent: email a recurring usage digest to every user opted into `frequency`.
+
+    daily  -> previous day's report; weekly -> last week's report. Users with no tracked
+    activity for the period are skipped (no point emailing an empty digest).
+    Returns the number of digests actually sent.
+    """
+    from django.contrib.auth import get_user_model
+
+    from assistant.report import build_usage_report, render_report_email
+
+    if frequency not in ("daily", "weekly"):
+        logger.warning("send_scheduled_usage_digests: bad frequency %r", frequency)
+        return 0
+
+    period = {"kind": "yesterday"} if frequency == "daily" else {"kind": "last_week"}
+    User = get_user_model()
+    recipients = User.objects.filter(digest_frequency=frequency).exclude(email="")
+
+    sent = 0
+    for user in recipients.iterator():
+        try:
+            report = build_usage_report(user, period)
+            if not report.get("has_data"):
+                continue
+            subject, html_body, text_body = render_report_email(report, user=user)
+            send_usage_report_email(user.email, subject, html_body, text_body)
+            sent += 1
+        except RuntimeError as exc:
+            # SMTP not configured — stop early; the rest will fail the same way.
+            logger.warning("send_scheduled_usage_digests aborted (%s): %s", frequency, exc)
+            break
+        except Exception:
+            logger.exception(
+                "send_scheduled_usage_digests: failed for user_id=%s", getattr(user, "pk", None)
+            )
+    logger.info("send_scheduled_usage_digests(%s): sent %d digest(s)", frequency, sent)
+    return sent
+
+
+@shared_task
 def run_placeholder_ai_job(job_type, payload=None):
     """Reserved hook for future ML / AI workloads (run via Celery worker)."""
     payload = payload or {}

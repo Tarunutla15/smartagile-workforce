@@ -13,6 +13,7 @@ class AgentState(TypedDict, total=False):
     intent: str
     route: dict[str, Any]
     productivity_ctx: dict[str, Any]
+    task_insights_ctx: dict[str, Any]
     tasks_items: list[dict[str, Any]]
     tool_action: dict[str, Any]
     recent_messages: list[dict[str, Any]]

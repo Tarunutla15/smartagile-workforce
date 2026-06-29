@@ -82,17 +82,25 @@ def _wrap(
 
 
 def classify_node(user: Any, state: AgentState) -> dict[str, Any]:  # noqa: ARG001
-    from .intent import wants_email_report
+    from .intent import wants_email_report, wants_recurring_digest, wants_task_insights
 
     user_text = (state or {}).get("user_text") or ""
     recent = (state or {}).get("recent_messages") or []
     route = route_message(user_text, recent_messages=recent)
     intent = (route or {}).get("intent") or "general"
-    # Deterministic override: an explicit "email/send me ... report" request always
-    # routes to the email-report flow, even if the LLM router labeled it productivity.
-    if wants_email_report(user_text):
+    # Deterministic overrides (checked most-specific first):
+    # a recurring-digest request must NOT be treated as a one-off emailed report.
+    if wants_recurring_digest(user_text):
+        intent = "digest"
+        route = {**(route or {}), "intent": "digest"}
+    elif wants_email_report(user_text):
         intent = "report"
         route = {**(route or {}), "intent": "report"}
+    elif wants_task_insights(user_text) and (route or {}).get("tool", "none") == "none":
+        # Read-only task analytics: only when the router did NOT plan a task ACTION
+        # (create/delete/update/rename), so genuine actions still flow to the tasks agent.
+        intent = "task_insights"
+        route = {**(route or {}), "intent": "task_insights"}
     return {"intent": intent, "route": route}
 
 
@@ -796,6 +804,150 @@ def synthesize_tasks_node(user: Any, state: AgentState) -> dict[str, Any]:  # no
         llm_used=llm,
     )
     return {"assistant_text": text, "result_json": rj}
+
+
+def load_task_insights_node(user: Any, state: AgentState) -> dict[str, Any]:  # noqa: ARG001
+    """Read-only task analytics loader (planning agent)."""
+    from .task_insights import build_task_insights
+
+    return {"task_insights_ctx": build_task_insights(user)}
+
+
+def synthesize_task_insights_node(user: Any, state: AgentState) -> dict[str, Any]:  # noqa: ARG001
+    from .task_insights import build_task_insights, format_task_insights_markdown
+
+    ctx = (state or {}).get("task_insights_ctx") or build_task_insights(user)
+    user_text = (state or {}).get("user_text") or ""
+    recent = (state or {}).get("recent_messages") or []
+    memories = (state or {}).get("memories") or []
+    use_llm = bool(getattr(settings, "ASSISTANT_LLM_SYNTHESIZE", True))
+    llm: Any = None
+
+    if use_llm and is_llm_configured():
+        try:
+            system = (
+                "You are SmartAgile's task-planning assistant. Answer using ONLY the JSON "
+                "task-insights context below; never invent tasks or numbers. This is a "
+                "read-only planning/analytics view — do NOT claim you created, deleted, or "
+                "changed anything. "
+                "If has_tasks is false, say the user has no tasks yet and suggest adding some. "
+                "Lead with the `totals` (todo / in_progress / done and completion_pct). "
+                "If the user asks what to work on next, use `next_up`: when next_up.reason is "
+                "'in_progress' tell them to finish those started tasks first; when 'oldest_todo' "
+                "present them as the longest-waiting items. "
+                "If the user asks about stale / stuck / old / overdue tasks, use `aging_pending` "
+                "(age_days = days since created; there is no due-date data, so frame it as 'open "
+                "for N days', not 'overdue'). "
+                "If the user asks about workload or projects, summarize `by_project`. "
+                "Use `created_today` / `created_this_week` for recent-activity questions and "
+                "`recently_done` for completed work. "
+                "Be concise and encouraging; use **bold** for key numbers and task titles. Bullets are fine."
+            )
+            human = (
+                f"User message:\n{user_text}\n\n"
+                f"Recent chat context:\n{_format_recent_messages(recent)}\n\n"
+                f"User memory:\n{_format_memories(memories)}\n\n"
+                f"Authoritative task-insights JSON:\n{json.dumps(ctx, default=str)[:20000]}"
+            )
+            text, llm = invoke_system_human_resilient(system, human)
+        except Exception:  # pragma: no cover
+            logger.exception("synthesize task_insights LLM failed; using template")
+            text = format_task_insights_markdown(ctx)
+            llm = None
+    else:
+        text = format_task_insights_markdown(ctx)
+
+    rj = _wrap(
+        {
+            **ctx,
+            "retrieval": {
+                "recent_messages_count": len(recent),
+                "memories": memories[:6],
+            },
+        },
+        intent="task_insights",
+        llm_used=llm,
+    )
+    return {"assistant_text": text, "result_json": rj}
+
+
+def digest_node(user: Any, state: AgentState) -> dict[str, Any]:
+    """
+    Scheduling agent: enable/disable/inspect the user's recurring usage-report digest,
+    and optionally email it immediately ("send it now").
+    """
+    from ..digest import (
+        describe_digest,
+        describe_immediate_send,
+        parse_digest_request,
+        send_digest_now,
+        set_digest_frequency,
+        wants_immediate_send,
+    )
+
+    user_text = (state or {}).get("user_text") or ""
+    action = parse_digest_request(user_text)
+    immediate = wants_immediate_send(user_text)
+
+    # If the user named a cadence (or asked to stop), persist it first.
+    scheduled: str | None = None
+    if action in ("daily", "weekly", "off"):
+        set_digest_frequency(user, action)
+        scheduled = action
+
+    # Immediate send: email the digest right now (but never for an explicit "off").
+    if immediate and action != "off":
+        freq = action if action in ("daily", "weekly") else (getattr(user, "digest_frequency", "off") or "off")
+        if freq == "off":
+            freq = "daily"
+        res = send_digest_now(user, freq)
+        text = describe_immediate_send(res, freq, scheduled=scheduled if scheduled in ("daily", "weekly") else None)
+        return {
+            "assistant_text": text,
+            "result_json": _wrap(
+                {"kind": "digest_sent", "frequency": freq, "send": res},
+                intent="digest",
+                llm_used=None,
+            ),
+        }
+
+    if action == "status":
+        current = getattr(user, "digest_frequency", "off") or "off"
+        text = describe_digest(current, user_email=getattr(user, "email", "") or "")
+        return {
+            "assistant_text": text,
+            "result_json": _wrap(
+                {"kind": "digest_status", "frequency": current},
+                intent="digest",
+                llm_used=None,
+            ),
+        }
+
+    if action == "ambiguous":
+        text = (
+            "Would you like your usage digest **daily** or **weekly**? "
+            "Just say e.g. *“email me a daily digest”* — or *“turn off my digest”* to stop it."
+        )
+        return {
+            "assistant_text": text,
+            "result_json": _wrap(
+                {"kind": "digest_prompt", "frequency": getattr(user, "digest_frequency", "off") or "off"},
+                intent="digest",
+                llm_used=None,
+            ),
+        }
+
+    # action is one of: off / daily / weekly
+    set_digest_frequency(user, action)
+    text = describe_digest(action, user_email=getattr(user, "email", "") or "", just_changed=True)
+    return {
+        "assistant_text": text,
+        "result_json": _wrap(
+            {"kind": "digest_updated", "frequency": action},
+            intent="digest",
+            llm_used=None,
+        ),
+    }
 
 
 def synthesize_general_node(user: Any, state: AgentState) -> dict[str, Any]:  # noqa: ARG001

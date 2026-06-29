@@ -48,6 +48,17 @@ CELERY_BEAT_SCHEDULE = (
             "task": "smartagile.tasks.run_usage_daily_rollup",
             "schedule": crontab(hour=3, minute=5),
         },
+        # Scheduling agent: recurring usage digests for opted-in users.
+        "usage-digest-daily": {
+            "task": "smartagile.tasks.send_scheduled_usage_digests",
+            "schedule": crontab(hour=7, minute=0),
+            "args": ("daily",),
+        },
+        "usage-digest-weekly": {
+            "task": "smartagile.tasks.send_scheduled_usage_digests",
+            "schedule": crontab(hour=7, minute=30, day_of_week=1),  # Monday
+            "args": ("weekly",),
+        },
     }
     if crontab is not None
     else {}

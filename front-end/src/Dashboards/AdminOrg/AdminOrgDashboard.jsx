@@ -37,6 +37,7 @@ import FolderSpecialIcon from "@mui/icons-material/FolderSpecial";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import DashboardCustomizeIcon from "@mui/icons-material/DashboardCustomize";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import LogoutIcon from "@mui/icons-material/Logout";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -267,6 +268,24 @@ export default function AdminOrgDashboard() {
         })}
       </List>
       <Box sx={{ p: 2, borderTop: "1px solid rgba(148,163,184,0.15)" }}>
+        <Button
+          fullWidth
+          component={Link}
+          to="/employee/dashboard"
+          startIcon={<ArrowBackIcon sx={{ fontSize: 16 }} />}
+          sx={{ color: "#e2e8f0", justifyContent: "flex-start", mb: 1 }}
+        >
+          Employee dashboard
+        </Button>
+        <Button
+          fullWidth
+          component={Link}
+          to="/group/dashboard"
+          endIcon={<OpenInNewIcon sx={{ fontSize: 16 }} />}
+          sx={{ color: "#e2e8f0", justifyContent: "flex-start", mb: 1 }}
+        >
+          Group dashboard
+        </Button>
         <Button
           fullWidth
           component={Link}

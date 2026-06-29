@@ -11,8 +11,11 @@ import PropTypes from 'prop-types';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import GHome from './GHome';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import LogoutIcon from '@mui/icons-material/Logout';
+import MenuIcon from '@mui/icons-material/Menu';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import { api, mediaUrl } from '../../api/client';
 import { useSession } from '../../context/SessionContext';
 import { APPBAR_GRADIENT, APPBAR_SHADOW } from '../../utils/chartTheme';
@@ -20,7 +23,21 @@ import { DarkModeIconButton } from '../../theme/DarkModeToggle';
 
 const GroupDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const currentPath = location.pathname;
   const { user, clearSession, refreshSession } = useSession();
+  const [anchorEl, setAnchorEl] = React.useState(null);
+
+  const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
+
+  const menuItems = [
+    { text: 'Organization (admin)', path: '/admin/dashboard', adminOnly: true },
+    { text: 'Sprint dashboard', path: '/admin/sprint-dashboard', adminOnly: true },
+    { text: 'Employee profiles', path: '/admin/employee-profiles', adminOnly: true },
+    { text: 'Group dashboard', path: '/group/dashboard', adminOnly: false },
+    { text: 'Employee dashboard', path: '/employee/dashboard', adminOnly: false },
+  ].filter((item) => !item.adminOnly || user?.role === 'admin');
 
   const handleLogout = async () => {
     try {
@@ -47,6 +64,19 @@ const GroupDashboard = () => {
         }}
       >
         <Toolbar sx={{ minHeight: 56, height: 56, gap: 1 }}>
+          <IconButton edge="start" color="inherit" aria-label="Open navigation menu" onClick={handleMenuOpen}>
+            <MenuIcon />
+          </IconButton>
+          <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+            {menuItems.map(
+              (item) =>
+                item.path !== currentPath && (
+                  <MenuItem component={Link} to={item.path} onClick={handleMenuClose} key={item.path}>
+                    {item.text.trim()}
+                  </MenuItem>
+                )
+            )}
+          </Menu>
           <Typography variant="h6" noWrap sx={{ flexGrow: 1, fontWeight: 700, letterSpacing: '-0.02em' }}>
             SmartAgile <Box component="span" sx={{ fontWeight: 500, opacity: 0.85 }}>· Group</Box>
           </Typography>
