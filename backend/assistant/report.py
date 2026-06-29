@@ -117,6 +117,10 @@ def resolve_report_period(user_text: str) -> dict[str, Any]:
     """
     t = (user_text or "").lower()
 
+    # Respect explicit negations like "today report, not yesterday" so the negated
+    # day doesn't win just because it appears as a substring in the message.
+    t = re.sub(r"\bnot\s+(?:the\s+)?(today|yesterday)\b", " ", t)
+
     m = re.search(r"\b(?:last|past|previous)\s+(\d{1,2})\s+days?\b", t)
     if m:
         try:
