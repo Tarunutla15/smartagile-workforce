@@ -45,7 +45,7 @@ import "./styles.css";
 import { AppDataContext } from "./AppDataProvider";
 import { isWorkRelatedCategory } from "../../utils/workRelatedCategory";
 
-const ACCENT = "#0d9488";
+const ACCENT = "#4f46e5";
 
 const getIcon = (app) => {
   switch (app) {
@@ -278,7 +278,7 @@ const EmployeeActivityTable = () => {
             <Button
               variant="contained"
               onClick={applyDateFilter}
-              sx={{ bgcolor: ACCENT, textTransform: "none", fontWeight: 700, borderRadius: 2, px: 2, "&:hover": { bgcolor: "#0f766e" } }}
+              sx={{ bgcolor: ACCENT, textTransform: "none", fontWeight: 700, borderRadius: 2, px: 2, "&:hover": { bgcolor: "#4338ca" } }}
             >
               Apply
             </Button>
@@ -429,7 +429,7 @@ const EmployeeActivityTable = () => {
                               ml: { xs: 0, sm: 1 },
                               borderLeft: (t) => `3px solid ${t.palette.mode === "dark" ? t.palette.divider : ACCENT}`,
                               bgcolor: (t) =>
-                                t.palette.mode === "dark" ? "rgba(0,0,0,0.2)" : "rgba(13, 148, 136, 0.06)",
+                                t.palette.mode === "dark" ? "rgba(0,0,0,0.2)" : "rgba(79, 70, 229, 0.06)",
                             }}
                           >
                             <Typography

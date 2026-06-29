@@ -26,7 +26,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useSession } from "../context/SessionContext";
 import { api, mediaUrl } from "../api/client";
 
-const ACCENT = "#0d9488";
+const ACCENT = "#4f46e5";
 
 const STATUS_LABELS = {
   todo: "To do",
@@ -159,7 +159,7 @@ const UserProfile = () => {
       <Box
         sx={{
           background:
-            "linear-gradient(90deg, #0f766e 0%, #0d9488 45%, #115e59 100%)",
+            "linear-gradient(90deg, #4338ca 0%, #4f46e5 45%, #3730a3 100%)",
           color: "#fff",
           py: 2,
           px: { xs: 2, md: 4 },
@@ -207,7 +207,7 @@ const UserProfile = () => {
                   borderColor: ACCENT,
                   bgcolor: alpha(ACCENT, 0.12),
                   fontSize: 40,
-                  color: "#0f766e",
+                  color: "#4338ca",
                   fontWeight: 700,
                 }}
               >
@@ -239,7 +239,7 @@ const UserProfile = () => {
                     label={user.role === "admin" ? "Admin" : "Employee"}
                     sx={{
                       bgcolor: alpha(ACCENT, 0.12),
-                      color: "#0f766e",
+                      color: "#4338ca",
                       fontWeight: 600,
                     }}
                   />
@@ -252,7 +252,7 @@ const UserProfile = () => {
                   disabled={dataLoading}
                   sx={{
                     borderColor: ACCENT,
-                    color: "#0f766e",
+                    color: "#4338ca",
                     textTransform: "none",
                   }}
                 >
@@ -264,7 +264,7 @@ const UserProfile = () => {
                   sx={{
                     bgcolor: ACCENT,
                     textTransform: "none",
-                    "&:hover": { bgcolor: "#0f766e" },
+                    "&:hover": { bgcolor: "#4338ca" },
                   }}
                 >
                   {user.role === "admin" ? "Task planning" : "Open tasks"}

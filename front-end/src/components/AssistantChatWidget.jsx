@@ -28,7 +28,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import { api } from "../api/client";
 import { useSession } from "../context/SessionContext";
 
-const ACCENT = "#0d9488";
+const ACCENT = "#4f46e5";
 const PANEL_H = "min(560px, min(90vh, calc(100dvh - 32px)))";
 const PANEL_W = "min(920px, calc(100% - 32px))";
 const LS_HISTORY = "sa_assistant_history_open";
@@ -103,6 +103,135 @@ function ThinkingBubble() {
         Thinking…
       </Typography>
     </Stack>
+  );
+}
+
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+/**
+ * Draft card for an emailed usage report. Lets the user confirm/override the recipient
+ * and Send (calls the confirm endpoint) or Cancel (local only).
+ */
+function ReportDraftCard({ sessionId, messageId, draft, alreadySent, onSent }) {
+  const [recipient, setRecipient] = useState(draft?.recipient || "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [canceled, setCanceled] = useState(false);
+
+  const summary = draft?.summary || {};
+  const apps = (draft?.top_apps || []).slice(0, 3);
+  const validRecipient = EMAIL_RE.test((recipient || "").trim());
+
+  const handleSend = async () => {
+    if (!validRecipient || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const { data } = await api.post(`/api/assistant/sessions/${sessionId}/report/confirm/`, {
+        message_id: messageId,
+        recipient: recipient.trim(),
+      });
+      onSent?.(data.assistant_message);
+    } catch (e) {
+      setError(e?.response?.data?.error || e?.message || "Could not send the report");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const done = alreadySent;
+
+  return (
+    <Box
+      sx={{
+        mt: 1,
+        p: 1.25,
+        borderRadius: 2,
+        border: 1,
+        borderColor: "divider",
+        bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(99,102,241,0.10)" : "rgba(79,70,229,0.05)"),
+      }}
+    >
+      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", mb: 0.5 }}>
+        Email report{draft?.period_label ? ` — ${draft.period_label}` : ""}
+      </Typography>
+
+      {draft?.has_data ? (
+        <Box sx={{ mb: 1 }}>
+          <Stack direction="row" spacing={2} sx={{ mb: 0.5 }}>
+            <Box>
+              <Typography sx={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, color: "text.secondary" }}>
+                Total
+              </Typography>
+              <Typography sx={{ fontSize: 14, fontWeight: 700 }}>{summary.total_human || "—"}</Typography>
+            </Box>
+            <Box>
+              <Typography sx={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5, color: "text.secondary" }}>
+                Focus
+              </Typography>
+              <Typography sx={{ fontSize: 14, fontWeight: 700 }}>{summary.focus_pct || "—"}</Typography>
+            </Box>
+          </Stack>
+          {apps.length > 0 && (
+            <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+              Top: {apps.map((a) => `${a.name} (${a.duration_human})`).join(", ")}
+            </Typography>
+          )}
+        </Box>
+      ) : (
+        <Typography sx={{ fontSize: 12, color: "text.secondary", mb: 1 }}>
+          No tracked activity for this period yet — the email will say so.
+        </Typography>
+      )}
+
+      <TextField
+        size="small"
+        fullWidth
+        label="Send to"
+        placeholder="name@example.com"
+        value={recipient}
+        disabled={done || canceled || busy}
+        onChange={(e) => setRecipient(e.target.value)}
+        error={Boolean(recipient) && !validRecipient}
+        sx={{ mb: 1 }}
+      />
+
+      {error && (
+        <Typography color="error" sx={{ fontSize: 12, mb: 1 }}>
+          {error}
+        </Typography>
+      )}
+
+      {done ? (
+        <Typography sx={{ fontSize: 13, fontWeight: 600, color: "success.main" }}>
+          ✓ Sent
+        </Typography>
+      ) : canceled ? (
+        <Typography sx={{ fontSize: 13, color: "text.secondary" }}>Canceled.</Typography>
+      ) : (
+        <Stack direction="row" spacing={1}>
+          <Button
+            variant="contained"
+            size="small"
+            onClick={handleSend}
+            disabled={!validRecipient || busy}
+            startIcon={busy ? <CircularProgress size={14} color="inherit" /> : <SendIcon sx={{ fontSize: 16 }} />}
+            sx={{ textTransform: "none", bgcolor: ACCENT, "&:hover": { bgcolor: "#4338ca" } }}
+          >
+            {busy ? "Sending…" : "Send"}
+          </Button>
+          <Button
+            variant="text"
+            size="small"
+            onClick={() => setCanceled(true)}
+            disabled={busy}
+            sx={{ textTransform: "none", color: "text.secondary" }}
+          >
+            Cancel
+          </Button>
+        </Stack>
+      )}
+    </Box>
   );
 }
 
@@ -192,6 +321,23 @@ function AssistantChatWidget() {
   }, [messages, scrollToBottom]);
 
   const canSend = useMemo(() => Boolean(activeId && input.trim() && !sending), [activeId, input, sending]);
+
+  // Draft ids that already have a corresponding "sent" message (survives reloads).
+  const sentDraftIds = useMemo(() => {
+    const set = new Set();
+    for (const m of messages) {
+      const rj = m?.result_json;
+      if (rj && rj.kind === "email_report_sent" && rj.draft_message_id != null) {
+        set.add(Number(rj.draft_message_id));
+      }
+    }
+    return set;
+  }, [messages]);
+
+  const handleReportSent = useCallback((assistantMessage) => {
+    if (!assistantMessage) return;
+    setMessages((prev) => [...prev, assistantMessage]);
+  }, []);
 
   const handleNewChat = async () => {
     setErr("");
@@ -319,7 +465,7 @@ function AssistantChatWidget() {
                 borderBottom: 1,
                 borderColor: "divider",
                 background: (t) =>
-                  t.palette.mode === "dark" ? "rgba(15, 118, 110, 0.15)" : "rgba(13, 148, 136, 0.08)",
+                  t.palette.mode === "dark" ? "rgba(67, 56, 202, 0.15)" : "rgba(79, 70, 229, 0.08)",
               }}
             >
               <IconButton
@@ -390,7 +536,7 @@ function AssistantChatWidget() {
                       startIcon={<AddCommentOutlinedIcon />}
                       onClick={handleNewChat}
                       disabled={sending}
-                      sx={{ textTransform: "none", color: ACCENT, borderColor: "rgba(13,148,136,0.4)" }}
+                      sx={{ textTransform: "none", color: ACCENT, borderColor: "rgba(79, 70, 229,0.4)" }}
                       variant="outlined"
                     >
                       New chat
@@ -478,7 +624,7 @@ function AssistantChatWidget() {
                         startIcon={<AddCommentOutlinedIcon />}
                         onClick={handleNewChat}
                         disabled={sending}
-                        sx={{ textTransform: "none", color: ACCENT, borderColor: "rgba(13,148,136,0.4)" }}
+                        sx={{ textTransform: "none", color: ACCENT, borderColor: "rgba(79, 70, 229,0.4)" }}
                       >
                         New chat
                       </Button>
@@ -500,7 +646,7 @@ function AssistantChatWidget() {
                         color: m.role === "user" ? "#fff" : "text.primary",
                         border: m.role === "assistant" ? 1 : 0,
                         borderColor: "divider",
-                        boxShadow: m.role === "user" ? "0 8px 22px rgba(13,148,136,0.18)" : "none",
+                        boxShadow: m.role === "user" ? "0 8px 22px rgba(79, 70, 229,0.18)" : "none",
                       }}
                     >
                       {m.role === "assistant" ? (
@@ -513,6 +659,15 @@ function AssistantChatWidget() {
                         <Typography component="div" variant="body2" sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
                           {m.content}
                         </Typography>
+                      )}
+                      {m.role === "assistant" && !m._pending && m.result_json?.kind === "email_report_draft" && (
+                        <ReportDraftCard
+                          sessionId={activeId}
+                          messageId={m.id}
+                          draft={m.result_json.draft}
+                          alreadySent={sentDraftIds.has(Number(m.id))}
+                          onSent={handleReportSent}
+                        />
                       )}
                       {m.role === "assistant" && !m._pending && <ResultJsonBlock data={m.result_json} />}
                     </Box>
@@ -565,7 +720,7 @@ function AssistantChatWidget() {
             zIndex: (t) => t.zIndex.drawer + 2,
             bgcolor: ACCENT,
             color: "#fff",
-            "&:hover": { bgcolor: "#0f766e" },
+            "&:hover": { bgcolor: "#4338ca" },
             boxShadow: 4,
           }}
         >

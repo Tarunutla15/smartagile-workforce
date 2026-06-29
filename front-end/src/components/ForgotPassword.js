@@ -51,7 +51,7 @@ const ForgotPassword = () => {
           Remember it?{" "}
           <Link
             to="/login"
-            className="font-semibold text-teal-700 hover:text-teal-800"
+            className="font-semibold text-indigo-700 hover:text-indigo-800"
           >
             Back to login
           </Link>
@@ -74,7 +74,7 @@ const ForgotPassword = () => {
           />
         </div>
         {message && (
-          <div className="text-sm text-center text-emerald-800 bg-emerald-50 rounded-xl py-2.5 px-3">
+          <div className="text-sm text-center text-violet-800 bg-violet-50 rounded-xl py-2.5 px-3">
             {message}
           </div>
         )}

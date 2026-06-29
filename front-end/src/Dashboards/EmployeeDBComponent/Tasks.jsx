@@ -453,9 +453,9 @@ const Tasks = () => {
                 fontWeight: 700,
                 textTransform: "none",
                 boxShadow: `0 8px 20px ${alpha(theme.palette.primary.main, 0.35)}`,
-                background: `linear-gradient(90deg, #0f766e 0%, #0d9488 100%)`,
+                background: `linear-gradient(90deg, #4338ca 0%, #4f46e5 100%)`,
                 "&:hover": {
-                  background: `linear-gradient(90deg, #115e59 0%, #0f766e 100%)`,
+                  background: `linear-gradient(90deg, #3730a3 0%, #4338ca 100%)`,
                 },
               }}
             >

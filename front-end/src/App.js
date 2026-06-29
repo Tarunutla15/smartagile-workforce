@@ -3,13 +3,9 @@ import { BrowserRouter, Route, Routes } from "react-router-dom"; // Correctly im
 import Login from "./components/Login.js";
 import AdminLogin from "./components/AdminLogin.js";
 import Signup from "./components/Signup.js";
-import Header from "./components/Header";
-import Content from "./components/Content";
 import About from "./components/About.js";
-import DataCheck from "./components/data.js";
 import ForgotPassword from "./components/ForgotPassword";
 import UserProfile from "./components/UserProfile";
-import Employee from "./components/Employee";
 import EmployeeDashboard from "./Dashboards/EmployeeDBComponent/EmployeeDashboard";
 import GroupDashboard from "./Dashboards/GroupDBComponent/GroupDashboard";
 import SprintDashboard from "./Dashboards/SprintDBComponents/SprintDashboard";

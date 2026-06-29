@@ -80,7 +80,7 @@ const About = () => {
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <Link
             to="/"
-            className="text-sm font-semibold text-teal-700 hover:text-teal-800"
+            className="text-sm font-semibold text-indigo-700 hover:text-indigo-800"
           >
             ← Home
           </Link>
@@ -121,7 +121,7 @@ const About = () => {
           <p className="mt-3">
             <Link
               to="/data-collection"
-              className="text-sm font-semibold text-teal-800 hover:text-teal-900 underline-offset-2 hover:underline"
+              className="text-sm font-semibold text-indigo-800 hover:text-indigo-900 underline-offset-2 hover:underline"
             >
               Full disclosure: what is collected, who can see it, retention →
             </Link>

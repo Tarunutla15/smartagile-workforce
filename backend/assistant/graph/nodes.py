@@ -82,10 +82,17 @@ def _wrap(
 
 
 def classify_node(user: Any, state: AgentState) -> dict[str, Any]:  # noqa: ARG001
+    from .intent import wants_email_report
+
     user_text = (state or {}).get("user_text") or ""
     recent = (state or {}).get("recent_messages") or []
     route = route_message(user_text, recent_messages=recent)
     intent = (route or {}).get("intent") or "general"
+    # Deterministic override: an explicit "email/send me ... report" request always
+    # routes to the email-report flow, even if the LLM router labeled it productivity.
+    if wants_email_report(user_text):
+        intent = "report"
+        route = {**(route or {}), "intent": "report"}
     return {"intent": intent, "route": route}
 
 
@@ -536,6 +543,66 @@ def tool_tasks_node(user: Any, state: AgentState) -> dict[str, Any]:
         "result_json": _wrap(
             {"kind": "task_deleted", "task": deleted_task},
             intent="tasks",
+            llm_used=None,
+        ),
+    }
+
+
+def email_report_node(user: Any, state: AgentState) -> dict[str, Any]:
+    """
+    Build a usage report for the requested period and return a DRAFT (no email sent here).
+    The user confirms via the chat card -> the confirm endpoint actually sends it.
+    """
+    from ..report import (
+        build_usage_report,
+        extract_recipient,
+        render_report_email,
+        resolve_report_period,
+        summary_preview,
+    )
+
+    user_text = (state or {}).get("user_text") or ""
+    period = resolve_report_period(user_text)
+    default_email = (getattr(user, "email", "") or "").strip()
+    recipient, explicit = extract_recipient(user_text, default_email)
+
+    report = build_usage_report(user, period)
+    subject, _html, _text = render_report_email(report, user=user)
+    preview = summary_preview(report)
+
+    draft = {
+        "period": period,
+        "period_label": report.get("period_label"),
+        "recipient": recipient,
+        "recipient_explicit": explicit,
+        "subject": subject,
+        "preview": preview,
+        "has_data": report.get("has_data"),
+        "summary": report.get("summary"),
+        "top_apps": (report.get("top_apps") or [])[:5],
+        "top_sites": (report.get("top_sites") or [])[:5],
+        "categories": (report.get("categories") or [])[:5],
+    }
+
+    label = report.get("period_label") or "your activity"
+    if recipient:
+        text = (
+            f"Here is a draft of your **{label}** usage report for **{recipient}**.\n\n"
+            f"{preview}\n\n"
+            "Review it below and hit **Send** to email it (you can change the address first)."
+        )
+    else:
+        text = (
+            f"I prepared your **{label}** usage report.\n\n"
+            f"{preview}\n\n"
+            "Tell me which email address to send it to (or type it in the box below), then hit **Send**."
+        )
+
+    return {
+        "assistant_text": text,
+        "result_json": _wrap(
+            {"kind": "email_report_draft", "draft": draft},
+            intent="report",
             llm_used=None,
         ),
     }

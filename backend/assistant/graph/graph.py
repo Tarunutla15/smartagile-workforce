@@ -8,6 +8,7 @@ from langgraph.graph import END, StateGraph
 
 from .nodes import (
     classify_node,
+    email_report_node,
     load_memory_node,
     load_productivity_node,
     load_tasks_node,
@@ -34,12 +35,14 @@ def build_compiled_assistant_graph(user: Any):
     graph.add_node("synthesize_productivity", lambda s: synthesize_productivity_node(user, s))
     graph.add_node("synthesize_tasks", lambda s: synthesize_tasks_node(user, s))
     graph.add_node("synthesize_general", lambda s: synthesize_general_node(user, s))
+    graph.add_node("email_report", lambda s: email_report_node(user, s))
 
     graph.set_entry_point("classify")
     graph.add_conditional_edges(
         "classify",
         route_after_classify,
         {
+            "report": "email_report",
             "productivity": "load_memory",
             "tasks": "load_memory",
             "general": "load_memory",
@@ -54,6 +57,7 @@ def build_compiled_assistant_graph(user: Any):
             "general": "synthesize_general",
         },
     )
+    graph.add_edge("email_report", END)
     graph.add_edge("load_productivity", "synthesize_productivity")
     graph.add_edge("synthesize_productivity", END)
     # tool_tasks either returns an assistant_text (tool executed) or continues to load_tasks.

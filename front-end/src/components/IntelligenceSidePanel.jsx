@@ -15,7 +15,7 @@ import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { api } from "../api/client";
 
-const ACCENT = "#0d9488";
+const ACCENT = "#4f46e5";
 
 function typeShort(st) {
   if (st === "browser") return "web";
@@ -73,8 +73,8 @@ export default function IntelligenceSidePanel() {
         overflow: "hidden",
         background: (t) =>
           t.palette.mode === "dark"
-            ? "linear-gradient(165deg, rgba(13,148,136,0.12) 0%, rgba(15,23,42,0.95) 50%, #0f172a 100%)"
-            : "linear-gradient(165deg, #ecfdf5 0%, #ffffff 45%, #f8fafc 100%)",
+            ? "linear-gradient(165deg, rgba(79, 70, 229,0.12) 0%, rgba(15,23,42,0.95) 50%, #0f172a 100%)"
+            : "linear-gradient(165deg, #f5f3ff 0%, #ffffff 45%, #f8fafc 100%)",
         boxShadow: (t) =>
           t.palette.mode === "dark" ? "0 2px 16px rgba(0,0,0,0.35)" : "0 4px 20px rgba(15, 23, 42, 0.07)",
         position: "relative",
@@ -87,7 +87,7 @@ export default function IntelligenceSidePanel() {
           height: 100,
           background: (t) =>
             `radial-gradient(circle at 100% 0%, ${
-              t.palette.mode === "dark" ? "rgba(13,148,136,0.2)" : "rgba(13,148,136,0.12)"
+              t.palette.mode === "dark" ? "rgba(79, 70, 229,0.2)" : "rgba(79, 70, 229,0.12)"
             } 0%, transparent 65%)`,
           pointerEvents: "none",
         },
@@ -103,9 +103,9 @@ export default function IntelligenceSidePanel() {
                 borderRadius: 1.5,
                 display: "grid",
                 placeItems: "center",
-                bgcolor: "rgba(13, 148, 136, 0.15)",
+                bgcolor: "rgba(79, 70, 229, 0.15)",
                 border: 1,
-                borderColor: "rgba(13, 148, 136, 0.35)",
+                borderColor: "rgba(79, 70, 229, 0.35)",
                 color: ACCENT,
                 flexShrink: 0,
               }}
@@ -151,7 +151,7 @@ export default function IntelligenceSidePanel() {
                       <Chip
                         size="small"
                         label={f.focus_score != null ? `Focus ${Math.round(f.focus_score * 100)}%` : "Focus n/a"}
-                        sx={{ fontWeight: 700, bgcolor: "rgba(13,148,136,0.12)" }}
+                        sx={{ fontWeight: 700, bgcolor: "rgba(79, 70, 229,0.12)" }}
                       />
                       <Chip size="small" variant="outlined" label={`${f.app_switch_count} switches`} />
                     </Stack>
@@ -269,8 +269,8 @@ export default function IntelligenceSidePanel() {
                 borderRadius: 1.5,
                 py: 1,
                 bgcolor: ACCENT,
-                boxShadow: "0 2px 8px rgba(13,148,136,0.35)",
-                "&:hover": { bgcolor: "#0f766e" },
+                boxShadow: "0 2px 8px rgba(79, 70, 229,0.35)",
+                "&:hover": { bgcolor: "#4338ca" },
               }}
             >
               Open full intelligence

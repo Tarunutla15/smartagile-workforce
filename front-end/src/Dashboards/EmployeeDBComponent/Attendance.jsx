@@ -33,8 +33,8 @@ import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import { parseISO, isToday, format } from "date-fns";
 import { api } from "../../api/client";
 
-const ACCENT = "#0d9488";
-const CHART_COLORS = ["#0d9488", "#6366f1"];
+const ACCENT = "#4f46e5";
+const CHART_COLORS = ["#4f46e5", "#6366f1"];
 
 function formatDurationSeconds(sec) {
   if (sec == null || Number.isNaN(sec)) return "—";
@@ -56,12 +56,12 @@ function StatCard({ label, value, icon }) {
         borderColor: "divider",
         background: (t) =>
           t.palette.mode === "dark"
-            ? "linear-gradient(145deg, rgba(13,148,136,0.12) 0%, rgba(15,23,42,0.9) 100%)"
-            : "linear-gradient(145deg, #f0fdfa 0%, #fff 50%)",
+            ? "linear-gradient(145deg, rgba(79, 70, 229,0.12) 0%, rgba(15,23,42,0.9) 100%)"
+            : "linear-gradient(145deg, #eef2ff 0%, #fff 50%)",
         boxShadow: (t) => (t.palette.mode === "dark" ? "none" : "0 2px 12px rgba(15,23,42,0.06)"),
         transition: "0.2s ease",
         "&:hover": {
-          borderColor: "rgba(13, 148, 136, 0.35)",
+          borderColor: "rgba(79, 70, 229, 0.35)",
           boxShadow: (t) => (t.palette.mode === "dark" ? 2 : "0 6px 20px rgba(15,23,42,0.1)"),
         },
       }}
@@ -90,9 +90,9 @@ function StatCard({ label, value, icon }) {
               height: 40,
               borderRadius: 1.5,
               flexShrink: 0,
-              bgcolor: "rgba(13, 148, 136, 0.12)",
+              bgcolor: "rgba(79, 70, 229, 0.12)",
               border: 1,
-              borderColor: "rgba(13, 148, 136, 0.25)",
+              borderColor: "rgba(79, 70, 229, 0.25)",
               fontSize: 20,
             }}
           >
@@ -149,10 +149,10 @@ function TodayTimeline({ todayRow }) {
             borderRadius: 2,
             display: "grid",
             placeItems: "center",
-            bgcolor: "rgba(13, 148, 136, 0.15)",
+            bgcolor: "rgba(79, 70, 229, 0.15)",
             color: ACCENT,
             border: 1,
-            borderColor: "rgba(13, 148, 136, 0.35)",
+            borderColor: "rgba(79, 70, 229, 0.35)",
           }}
         >
           <TodayIcon />
@@ -279,7 +279,7 @@ function MyAttendance({ rows }) {
         border: 1,
         borderColor: "divider",
         background: (t) =>
-          t.palette.mode === "dark" ? "rgba(0,0,0,0.2)" : "rgba(13, 148, 136, 0.04)",
+          t.palette.mode === "dark" ? "rgba(0,0,0,0.2)" : "rgba(79, 70, 229, 0.04)",
       }}
     >
       <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 0.5, color: "text.primary" }}>

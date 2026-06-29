@@ -66,7 +66,7 @@ export default function TrackingDisclosureDialog() {
           control={<Checkbox checked={read} onChange={(e) => setRead(e.target.checked)} color="primary" />}
           label="I have read the above. I understand what the desktop agent can collect when it runs."
         />
-        <Button variant="contained" disabled={!read} onClick={acknowledge} sx={{ bgcolor: "#0d9488" }}>
+        <Button variant="contained" disabled={!read} onClick={acknowledge} sx={{ bgcolor: "#4f46e5" }}>
           Continue
         </Button>
       </DialogActions>

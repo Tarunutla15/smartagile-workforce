@@ -245,7 +245,7 @@ export default function AdminEmployeeActivityDialog({ open, onClose, employee })
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2 }}>
-        <Button onClick={onClose} variant="contained" sx={{ bgcolor: "#0f766e" }}>
+        <Button onClick={onClose} variant="contained" sx={{ bgcolor: "#4338ca" }}>
           Close
         </Button>
       </DialogActions>

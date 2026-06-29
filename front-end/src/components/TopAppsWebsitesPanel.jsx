@@ -5,9 +5,9 @@ import { Box, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
 import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 import { AppDataContext } from "../Dashboards/EmployeeDBComponent/AppDataProvider";
 
-const ACCENT = "#0d9488";
+const ACCENT = "#4f46e5";
 const PIE_COLORS = [
-  "#0d9488",
+  "#4f46e5",
   "#2563eb",
   "#7c3aed",
   "#ea580c",

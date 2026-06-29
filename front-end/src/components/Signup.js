@@ -90,7 +90,7 @@ const Register = () => {
           <p className="mb-3 text-slate-600">
             <Link
               to="/data-collection"
-              className="font-semibold text-teal-700 hover:text-teal-800 underline-offset-2 hover:underline"
+              className="font-semibold text-indigo-700 hover:text-indigo-800 underline-offset-2 hover:underline"
             >
               What we collect
             </Link>{" "}
@@ -99,7 +99,7 @@ const Register = () => {
           Already registered?{" "}
           <Link
             to="/login"
-            className="font-semibold text-teal-700 hover:text-teal-800"
+            className="font-semibold text-indigo-700 hover:text-indigo-800"
           >
             Sign in
           </Link>
@@ -189,7 +189,7 @@ const Register = () => {
             id="profilePhoto"
             accept="image/png,image/jpeg,image/jpg"
             onChange={handlePhotoUpload}
-            className="block w-full text-sm text-slate-600 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-800 hover:file:bg-teal-100 cursor-pointer"
+            className="block w-full text-sm text-slate-600 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-800 hover:file:bg-indigo-100 cursor-pointer"
           />
         </div>
         {error && (

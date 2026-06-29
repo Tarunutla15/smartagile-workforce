@@ -73,7 +73,7 @@ const PasswordResetForm = () => {
         <>
           <Link
             to="/forget"
-            className="font-semibold text-teal-700 hover:text-teal-800"
+            className="font-semibold text-indigo-700 hover:text-indigo-800"
           >
             Request a new code
           </Link>
@@ -125,7 +125,7 @@ const PasswordResetForm = () => {
           />
         </div>
         {message && (
-          <div className="text-sm text-center text-emerald-800 bg-emerald-50 rounded-xl py-2.5 px-3">
+          <div className="text-sm text-center text-violet-800 bg-violet-50 rounded-xl py-2.5 px-3">
             {message}
           </div>
         )}

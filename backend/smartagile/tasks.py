@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from celery import shared_task
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 
@@ -98,6 +98,35 @@ def send_password_reset_otp_email(self, to_email: str, otp: int):
     except Exception as exc:
         logger.exception("send_password_reset_otp_email: SMTP failed for to=%r", to_email)
         raise self.retry(exc=exc) from exc
+
+
+def send_usage_report_email(to_email: str, subject: str, html_body: str, text_body: str) -> None:
+    """
+    Send a usage-report email (HTML + plaintext) synchronously.
+
+    Called from the assistant confirm endpoint so we can report real success/failure to
+    the user. Raises RuntimeError if SMTP is not configured, or the underlying SMTP error.
+    """
+    from_email = getattr(
+        settings,
+        "DEFAULT_FROM_EMAIL",
+        settings.EMAIL_HOST_USER or "noreply@localhost",
+    )
+    if not (getattr(settings, "EMAIL_HOST_PASSWORD", None) or ""):
+        logger.error("send_usage_report_email: missing EMAIL_HOST_PASSWORD; aborting send to %r", to_email)
+        raise RuntimeError("EMAIL_HOST_PASSWORD is not set; configure backend/.env")
+
+    msg = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body or "",
+        from_email=from_email,
+        to=[to_email],
+    )
+    if html_body:
+        msg.attach_alternative(html_body, "text/html")
+    logger.info("send_usage_report_email: sending from=%r to=%r subject=%r", from_email, to_email, subject)
+    msg.send(fail_silently=False)
+    logger.info("send_usage_report_email: SMTP send finished OK to=%r", to_email)
 
 
 @shared_task

@@ -33,7 +33,7 @@ const DataCollectionPage = () => {
             gap: 2,
           }}
         >
-          <Link to="/" style={{ fontSize: 14, fontWeight: 600, color: "#0f766e", textDecoration: "none" }}>
+          <Link to="/" style={{ fontSize: 14, fontWeight: 600, color: "#4338ca", textDecoration: "none" }}>
             ← Home
           </Link>
           <Link to="/login" style={{ fontSize: 14, fontWeight: 600, color: "#334155", textDecoration: "none" }}>

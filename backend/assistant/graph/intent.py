@@ -12,11 +12,26 @@ from .llm_factory import invoke_messages_resilient, is_llm_configured
 
 logger = logging.getLogger(__name__)
 
-INTENTS = frozenset({"productivity", "tasks", "general"})
+INTENTS = frozenset({"productivity", "tasks", "general", "report"})
+
+# "email/send/share me ... report/summary/usage" -> user wants the report emailed.
+_REPORT_SEND_RE = re.compile(r"\b(e-?mail|mail|send|share|forward)\b", re.IGNORECASE)
+_REPORT_NOUN_RE = re.compile(
+    r"\b(report|summary|recap|digest|usage|stats|statistics|activity|breakdown)\b",
+    re.IGNORECASE,
+)
+
+
+def wants_email_report(user_text: str) -> bool:
+    """True when the message asks to email/send a usage report (robust to wording)."""
+    t = user_text or ""
+    return bool(_REPORT_SEND_RE.search(t) and _REPORT_NOUN_RE.search(t))
 
 
 def classify_intent_rules(user_text: str) -> str:
     t = (user_text or "").lower()
+    if wants_email_report(user_text):
+        return "report"
     if any(
         k in t
         for k in (
@@ -115,6 +130,8 @@ def _classify_intent_llm(user_text: str) -> str | None:
                     content=(
                         "Classify the user message for a workplace app. Be robust to typos "
                         "and paraphrasing. Reply with JSON only, no markdown: "
+                        '{"intent":"report"} when the user asks to EMAIL/SEND/SHARE a usage '
+                        "report or summary to an address; "
                         '{"intent":"productivity"} for focus/time/distraction/usage/apps/'
                         "websites/categories or comparing any of those across periods; "
                         '{"intent":"tasks"} for work items/sprints/projects/todo; '

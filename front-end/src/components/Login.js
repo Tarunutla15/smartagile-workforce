@@ -70,7 +70,7 @@ function Login() {
           Don&apos;t have an account?{" "}
           <Link
             to="/signup"
-            className="font-semibold text-teal-700 hover:text-teal-800"
+            className="font-semibold text-indigo-700 hover:text-indigo-800"
           >
             Register
           </Link>
@@ -118,7 +118,7 @@ function Login() {
           <div
             className={`text-center text-sm rounded-xl py-2.5 px-3 ${
               message.includes("successful")
-                ? "bg-emerald-50 text-emerald-800"
+                ? "bg-violet-50 text-violet-800"
                 : "bg-red-50 text-red-700"
             }`}
           >
@@ -131,7 +131,7 @@ function Login() {
         <p className="text-center text-sm">
           <Link
             to="/forget"
-            className="font-medium text-teal-700 hover:text-teal-800 underline-offset-2 hover:underline"
+            className="font-medium text-indigo-700 hover:text-indigo-800 underline-offset-2 hover:underline"
           >
             Forgot password?
           </Link>

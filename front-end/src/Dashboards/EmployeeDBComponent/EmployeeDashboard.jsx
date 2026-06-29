@@ -28,6 +28,7 @@ import { AppDataContext } from './AppDataProvider';
 import { useSession } from '../../context/SessionContext';
 import { api, mediaUrl } from '../../api/client';
 import TrackingDisclosureDialog from '../../components/TrackingDisclosureDialog';
+import { DarkModeIconButton } from '../../theme/DarkModeToggle';
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
@@ -91,7 +92,7 @@ const EmployeeDashboard = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f1f5f9' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <TrackingDisclosureDialog />
       <CssBaseline />
       <AppBar
@@ -99,8 +100,8 @@ const EmployeeDashboard = () => {
         elevation={0}
         sx={{
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          background: 'linear-gradient(90deg, #0f766e 0%, #0d9488 45%, #115e59 100%)',
-          boxShadow: '0 4px 24px rgba(15, 118, 110, 0.25)',
+          background: 'linear-gradient(90deg, #4338ca 0%, #4f46e5 45%, #3730a3 100%)',
+          boxShadow: '0 4px 24px rgba(67, 56, 202, 0.25)',
         }}
       >
         <Toolbar
@@ -131,6 +132,7 @@ const EmployeeDashboard = () => {
             SmartAgile
           </Typography>
           <Box sx={{ flex: 1, minWidth: 8 }} />
+          <DarkModeIconButton />
           <IconButton
             color="inherit"
             aria-label="Refresh usage data"
@@ -253,7 +255,7 @@ const VerticalTabs = () => {
           left: 0,
           width: SIDEBAR_WIDTH,
           height: `calc(100vh - ${APP_BAR_HEIGHT}px)`,
-          bgcolor: '#fff',
+          bgcolor: 'background.paper',
           borderRight: 1,
           borderColor: 'divider',
           boxShadow: '4px 0 24px rgba(15, 23, 42, 0.06)',
@@ -282,8 +284,8 @@ const VerticalTabs = () => {
               '&.Mui-selected': {
                 fontWeight: 700,
                 fontSize: 9,
-                color: '#0f766e',
-                bgcolor: 'rgba(13, 148, 136, 0.08)',
+                color: '#4338ca',
+                bgcolor: 'rgba(79, 70, 229, 0.08)',
               },
             },
             '& .MuiTab-wrapper': {
@@ -294,7 +296,7 @@ const VerticalTabs = () => {
               left: 0,
               width: 3,
               borderRadius: '0 4px 4px 0',
-              bgcolor: '#0d9488',
+              bgcolor: '#4f46e5',
             },
           }}
         >
@@ -312,7 +314,7 @@ const VerticalTabs = () => {
           ml: `${SIDEBAR_WIDTH}px`,
           width: `calc(100% - ${SIDEBAR_WIDTH}px)`,
           minWidth: 0,
-          bgcolor: '#f1f5f9',
+          bgcolor: 'background.default',
         }}
       >
         <TabPanel value={value} index={0}>

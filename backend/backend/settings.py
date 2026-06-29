@@ -233,7 +233,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Local timezone for day-boundary logic. Events are still stored in UTC (USE_TZ=True);
+# this only controls how dates are computed/grouped (TruncDate, localdate, localtime),
+# so "Today" on the dashboard/app-details matches the user's local calendar day.
+# Override per deployment via the TIME_ZONE env var if needed.
+TIME_ZONE = os.environ.get('TIME_ZONE', 'Asia/Kolkata')
 
 USE_I18N = True
 

@@ -86,9 +86,9 @@ function overviewStatsForRows(rows) {
   };
 }
 
-const statAccent = '#0d9488';
+const statAccent = '#4f46e5';
 const cardHover = {
-  borderColor: 'rgba(13, 148, 136, 0.35) !important',
+  borderColor: 'rgba(79, 70, 229, 0.35) !important',
   boxShadow: (t) => (t.palette.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.4)' : '0 8px 24px rgba(15, 23, 42, 0.1)'),
   transform: 'translateY(-2px)',
 };
@@ -105,8 +105,8 @@ const StatCard = ({ title, value, icon, hint }) => {
         bgcolor: 'background.paper',
         background: (t) =>
           t.palette.mode === 'dark'
-            ? 'linear-gradient(140deg, rgba(13,148,136,0.12) 0%, rgba(15,23,42,0.95) 60%)'
-            : 'linear-gradient(140deg, #f0fdfa 0%, #ffffff 55%, #f8fafc 100%)',
+            ? 'linear-gradient(140deg, rgba(79, 70, 229,0.12) 0%, rgba(15,23,42,0.95) 60%)'
+            : 'linear-gradient(140deg, #eef2ff 0%, #ffffff 55%, #f8fafc 100%)',
         transition: 'box-shadow 0.22s ease, border-color 0.22s ease, transform 0.22s ease',
         cursor: hint ? 'help' : 'default',
         '&:hover': cardHover,
@@ -148,9 +148,9 @@ const StatCard = ({ title, value, icon, hint }) => {
             borderRadius: 2,
             flexShrink: 0,
             background: (t) =>
-              t.palette.mode === 'dark' ? 'rgba(13, 148, 136, 0.18)' : 'rgba(13, 148, 136, 0.12)',
+              t.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.18)' : 'rgba(79, 70, 229, 0.12)',
             border: 1,
-            borderColor: 'rgba(13, 148, 136, 0.22)',
+            borderColor: 'rgba(79, 70, 229, 0.22)',
             fontSize: 24,
             '& .MuiSvgIcon-root': { fontSize: 28 },
           }}
@@ -220,8 +220,8 @@ const ProductivityChart = () => {
           bgcolor: 'background.paper',
           background: (t) =>
             t.palette.mode === 'dark'
-              ? 'linear-gradient(160deg, rgba(13,148,136,0.1) 0%, rgba(15,23,42,0.95) 100%)'
-              : 'linear-gradient(160deg, #f0fdfa 0%, #ffffff 55%)',
+              ? 'linear-gradient(160deg, rgba(79, 70, 229,0.1) 0%, rgba(15,23,42,0.95) 100%)'
+              : 'linear-gradient(160deg, #eef2ff 0%, #ffffff 55%)',
           boxShadow: (t) => (t.palette.mode === 'dark' ? '0 2px 16px rgba(0,0,0,0.3)' : '0 2px 16px rgba(15, 23, 42, 0.07)'),
         }}
       >
@@ -242,8 +242,8 @@ const ProductivityChart = () => {
           bgcolor: 'background.paper',
           background: (t) =>
             t.palette.mode === 'dark'
-              ? 'linear-gradient(165deg, rgba(13,148,136,0.1) 0%, rgba(15,23,42,0.95) 100%)'
-              : 'linear-gradient(165deg, #f0fdfa 0%, #ffffff 60%)',
+              ? 'linear-gradient(165deg, rgba(79, 70, 229,0.1) 0%, rgba(15,23,42,0.95) 100%)'
+              : 'linear-gradient(165deg, #eef2ff 0%, #ffffff 60%)',
           boxShadow: (t) => (t.palette.mode === 'dark' ? '0 2px 14px rgba(0,0,0,0.3)' : '0 2px 14px rgba(15, 23, 42, 0.06)'),
         }}
       >
@@ -341,7 +341,7 @@ const EmployeeWorkSection = () => {
                 p: 2.25,
                 pb: 2,
                 background: (t) =>
-                  t.palette.mode === 'dark' ? 'rgba(13, 148, 136, 0.1)' : 'rgba(13, 148, 136, 0.08)',
+                  t.palette.mode === 'dark' ? 'rgba(79, 70, 229, 0.1)' : 'rgba(79, 70, 229, 0.08)',
                 borderBottom: 1,
                 borderColor: 'divider',
               }}
@@ -354,10 +354,10 @@ const EmployeeWorkSection = () => {
                     borderRadius: 2,
                     display: 'grid',
                     placeItems: 'center',
-                    bgcolor: 'rgba(13, 148, 136, 0.2)',
+                    bgcolor: 'rgba(79, 70, 229, 0.2)',
                     color: statAccent,
                     border: 1,
-                    borderColor: 'rgba(13, 148, 136, 0.35)',
+                    borderColor: 'rgba(79, 70, 229, 0.35)',
                   }}
                 >
                   <FolderOpenRoundedIcon sx={{ fontSize: 26 }} />
@@ -388,7 +388,7 @@ const EmployeeWorkSection = () => {
                     <Chip
                       size="small"
                       label={projects.length}
-                      sx={{ fontWeight: 800, bgcolor: 'rgba(13, 148, 136, 0.15)', color: 'primary.main' }}
+                      sx={{ fontWeight: 800, bgcolor: 'rgba(79, 70, 229, 0.15)', color: 'primary.main' }}
                     />
                   </Stack>
                   {projects.length === 0 ? (
@@ -412,7 +412,7 @@ const EmployeeWorkSection = () => {
                             bgcolor: 'background.paper',
                             transition: '0.2s ease',
                             '&:hover': {
-                              borderColor: 'rgba(13, 148, 136, 0.45)',
+                              borderColor: 'rgba(79, 70, 229, 0.45)',
                               boxShadow: (t) => (t.palette.mode === 'dark' ? '0 2px 10px rgba(0,0,0,0.3)' : '0 2px 12px rgba(15,23,42,0.08)'),
                             },
                           }}
@@ -425,7 +425,7 @@ const EmployeeWorkSection = () => {
                               size="small"
                               label={p.your_role || 'member'}
                               variant="outlined"
-                              sx={{ fontWeight: 600, borderColor: 'rgba(13, 148, 136, 0.5)', color: 'primary.main' }}
+                              sx={{ fontWeight: 600, borderColor: 'rgba(79, 70, 229, 0.5)', color: 'primary.main' }}
                             />
                           </Stack>
                         </Box>
@@ -476,7 +476,7 @@ const EmployeeWorkSection = () => {
                             bgcolor: (t2) => (t2.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
                             transition: '0.2s ease',
                             '&:hover': {
-                              borderColor: 'rgba(13, 148, 136, 0.35)',
+                              borderColor: 'rgba(79, 70, 229, 0.35)',
                               boxShadow: (t2) => (t2.palette.mode === 'dark' ? 2 : 1),
                             },
                           }}
@@ -497,7 +497,7 @@ const EmployeeWorkSection = () => {
                                 size="small"
                                 variant="outlined"
                                 label="Yours"
-                                sx={{ borderColor: 'rgba(13, 148, 136, 0.45)' }}
+                                sx={{ borderColor: 'rgba(79, 70, 229, 0.45)' }}
                               />
                             )}
                             {t.project_name ? (
@@ -531,8 +531,8 @@ const EmployeeWorkSection = () => {
                       borderRadius: 2,
                       py: 1.1,
                       bgcolor: statAccent,
-                      boxShadow: '0 2px 8px rgba(13, 148, 136, 0.35)',
-                      '&:hover': { bgcolor: '#0f766e' },
+                      boxShadow: '0 2px 8px rgba(79, 70, 229, 0.35)',
+                      '&:hover': { bgcolor: '#4338ca' },
                     }}
                   >
                     Refresh projects & tasks
@@ -617,7 +617,7 @@ const EHome = () => {
               />
             </>
           )}
-          <Button variant="contained" onClick={applyDateFilter} sx={{ bgcolor: statAccent, '&:hover': { bgcolor: '#0f766e' } }}>
+          <Button variant="contained" onClick={applyDateFilter} sx={{ bgcolor: statAccent, '&:hover': { bgcolor: '#4338ca' } }}>
             Apply
           </Button>
         </Stack>

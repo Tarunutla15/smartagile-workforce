@@ -4,6 +4,7 @@ import './index.css';
 import App from './App';
 import { AppDataProvider } from './Dashboards/EmployeeDBComponent/AppDataProvider';
 import { SessionProvider } from './context/SessionContext';
+import { ColorModeProvider } from './theme/ColorModeProvider';
 import reportWebVitals from './reportWebVitals';
 
 // Browsers (often with MUI, charts, or Collapse) can emit this during layout; CRA's overlay
@@ -21,11 +22,13 @@ window.addEventListener(
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <SessionProvider>
-    <AppDataProvider>
-      <App />
-    </AppDataProvider>
-  </SessionProvider>
+  <ColorModeProvider>
+    <SessionProvider>
+      <AppDataProvider>
+        <App />
+      </AppDataProvider>
+    </SessionProvider>
+  </ColorModeProvider>
 );
 
 // If you want to start measuring performance in your app, pass a function

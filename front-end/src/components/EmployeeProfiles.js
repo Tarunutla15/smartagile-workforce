@@ -260,10 +260,10 @@ export default function EmployeeProfiles() {
             onClick={load}
             disabled={loading}
             sx={{
-              bgcolor: "#0f766e",
+              bgcolor: "#4338ca",
               textTransform: "none",
               fontWeight: 600,
-              "&:hover": { bgcolor: "#115e59" },
+              "&:hover": { bgcolor: "#3730a3" },
               alignSelf: { xs: "stretch", sm: "center" },
             }}
           >
@@ -358,7 +358,7 @@ export default function EmployeeProfiles() {
                         <Stack direction="row" alignItems="center" spacing={1.5}>
                           <Avatar
                             src={p.profile_photo ? mediaUrl(p.profile_photo) : undefined}
-                            sx={{ width: 40, height: 40, bgcolor: "rgba(15, 118, 110, 0.12)", color: "#0f766e" }}
+                            sx={{ width: 40, height: 40, bgcolor: "rgba(67, 56, 202, 0.12)", color: "#4338ca" }}
                           >
                             {initial}
                           </Avatar>
@@ -381,8 +381,8 @@ export default function EmployeeProfiles() {
                           label={p.role === "admin" ? "Admin" : "Employee"}
                           sx={{
                             fontWeight: 600,
-                            bgcolor: p.role === "admin" ? "rgba(245, 158, 11, 0.15)" : "rgba(15, 118, 110, 0.1)",
-                            color: p.role === "admin" ? "#b45309" : "#0f766e",
+                            bgcolor: p.role === "admin" ? "rgba(245, 158, 11, 0.15)" : "rgba(67, 56, 202, 0.1)",
+                            color: p.role === "admin" ? "#b45309" : "#4338ca",
                           }}
                         />
                       </TableCell>
@@ -423,7 +423,7 @@ export default function EmployeeProfiles() {
               <Stack direction="row" spacing={2} alignItems="center">
                 <Avatar
                   src={selected.profile_photo ? mediaUrl(selected.profile_photo) : undefined}
-                  sx={{ width: 64, height: 64, bgcolor: "rgba(15, 118, 110, 0.15)", color: "#0f766e", fontSize: 28 }}
+                  sx={{ width: 64, height: 64, bgcolor: "rgba(67, 56, 202, 0.15)", color: "#4338ca", fontSize: 28 }}
                 >
                   {(selected.username?.[0] || selected.email?.[0] || "?").toUpperCase()}
                 </Avatar>
@@ -444,8 +444,8 @@ export default function EmployeeProfiles() {
                         bgcolor:
                           selected.role === "admin"
                             ? "rgba(245, 158, 11, 0.15)"
-                            : "rgba(15, 118, 110, 0.1)",
-                        color: selected.role === "admin" ? "#b45309" : "#0f766e",
+                            : "rgba(67, 56, 202, 0.1)",
+                        color: selected.role === "admin" ? "#b45309" : "#4338ca",
                       }}
                     />
                   </Stack>
@@ -459,7 +459,7 @@ export default function EmployeeProfiles() {
               <Stack spacing={3}>
                 <Box>
                   <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
-                    <FolderSpecialIcon sx={{ color: "#0f766e", fontSize: 22 }} />
+                    <FolderSpecialIcon sx={{ color: "#4338ca", fontSize: 22 }} />
                     <Typography variant="subtitle1" fontWeight={700}>
                       Projects ({detailProjects.length})
                     </Typography>
@@ -488,7 +488,7 @@ export default function EmployeeProfiles() {
 
                 <Box>
                   <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
-                    <AssignmentIcon sx={{ color: "#0f766e", fontSize: 22 }} />
+                    <AssignmentIcon sx={{ color: "#4338ca", fontSize: 22 }} />
                     <Typography variant="subtitle1" fontWeight={700}>
                       Assigned tasks ({detailTasks.length})
                     </Typography>

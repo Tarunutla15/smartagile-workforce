@@ -14,7 +14,7 @@ const LoginPage = () => {
       <div className="absolute top-6 left-6 z-10">
         <Link
           to="/"
-          className="text-sm font-medium text-slate-600 hover:text-teal-700 transition-colors inline-flex items-center gap-1"
+          className="text-sm font-medium text-slate-600 hover:text-indigo-700 transition-colors inline-flex items-center gap-1"
         >
           <span aria-hidden>←</span> Back to home
         </Link>
@@ -22,7 +22,7 @@ const LoginPage = () => {
 
       <div className="relative z-[1] w-full max-w-lg">
         <div className="text-center mb-10">
-          <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-700 items-center justify-center shadow-lg shadow-teal-900/20 mb-4 ring-4 ring-white/80 overflow-hidden mx-auto">
+          <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-700 items-center justify-center shadow-lg shadow-indigo-900/20 mb-4 ring-4 ring-white/80 overflow-hidden mx-auto">
             <img src={logo} alt="" className="w-10 h-10 object-contain" />
           </div>
           <h1 className="font-display text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
@@ -37,9 +37,9 @@ const LoginPage = () => {
           <button
             type="button"
             onClick={() => navigate("/loging")}
-            className="group text-left rounded-2xl border-2 border-slate-200 bg-white/90 p-6 shadow-sm hover:border-teal-400 hover:shadow-md hover:shadow-teal-900/5 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500/40"
+            className="group text-left rounded-2xl border-2 border-slate-200 bg-white/90 p-6 shadow-sm hover:border-indigo-400 hover:shadow-md hover:shadow-indigo-900/5 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700 text-lg font-semibold mb-4 group-hover:bg-teal-100">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700 text-lg font-semibold mb-4 group-hover:bg-indigo-100">
               E
             </span>
             <h2 className="font-semibold text-lg text-slate-900">
@@ -48,7 +48,7 @@ const LoginPage = () => {
             <p className="mt-1 text-sm text-slate-600 leading-relaxed">
               Tasks, attendance, apps &amp; websites dashboard.
             </p>
-            <span className="mt-4 inline-flex items-center text-sm font-semibold text-teal-700">
+            <span className="mt-4 inline-flex items-center text-sm font-semibold text-indigo-700">
               Continue
               <span className="ml-1 group-hover:translate-x-0.5 transition-transform">
                 →
@@ -82,7 +82,7 @@ const LoginPage = () => {
         <p className="text-center mt-8 text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
           <Link
             to="/data-collection"
-            className="font-semibold text-teal-700 hover:text-teal-800 underline-offset-2 hover:underline"
+            className="font-semibold text-indigo-700 hover:text-indigo-800 underline-offset-2 hover:underline"
           >
             What we collect
           </Link>
@@ -94,7 +94,7 @@ const LoginPage = () => {
           New here?{" "}
           <Link
             to="/signup"
-            className="font-semibold text-teal-700 hover:text-teal-800 underline-offset-2 hover:underline"
+            className="font-semibold text-indigo-700 hover:text-indigo-800 underline-offset-2 hover:underline"
           >
             Create an account
           </Link>

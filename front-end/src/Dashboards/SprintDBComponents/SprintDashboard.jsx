@@ -19,6 +19,8 @@ import { useNavigate } from 'react-router-dom';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { api, mediaUrl } from '../../api/client';
 import { useSession } from '../../context/SessionContext';
+import { APPBAR_GRADIENT, APPBAR_SHADOW } from '../../utils/chartTheme';
+import { DarkModeIconButton } from '../../theme/DarkModeToggle';
 
 const SprintDashboard = () => {
   const navigate = useNavigate();
@@ -49,35 +51,36 @@ const SprintDashboard = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <CssBaseline />
       <AppBar
         position="fixed"
+        elevation={0}
         sx={{
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          backgroundColor: '#3f51b5',
-          height:55
+          background: APPBAR_GRADIENT,
+          boxShadow: APPBAR_SHADOW,
         }}
       >
-        <Toolbar>
-          <Typography variant="h6" noWrap sx={{ flexGrow: 1 }}>
-            SmartAgile
+        <Toolbar sx={{ minHeight: 56, height: 56, gap: 1 }}>
+          <Typography variant="h6" noWrap sx={{ flexGrow: 1, fontWeight: 700, letterSpacing: '-0.02em' }}>
+            SmartAgile <Box component="span" sx={{ fontWeight: 500, opacity: 0.85 }}>· Sprints</Box>
           </Typography>
-          
-          <Avatar alt="User Avatar" src={user.profile_photo ? mediaUrl(user.profile_photo) : ''} />
-          <IconButton color="inherit">
+          <DarkModeIconButton />
+          <IconButton color="inherit" size="small">
             <NotificationsIcon />
           </IconButton>
-          <IconButton color="inherit" onClick={handleLogout}>
+          <Avatar
+            alt=""
+            src={user.profile_photo ? mediaUrl(user.profile_photo) : ''}
+            sx={{ width: 32, height: 32 }}
+          />
+          <IconButton color="inherit" onClick={handleLogout} size="small" aria-label="Log out">
             <LogoutIcon />
           </IconButton>
         </Toolbar>
       </AppBar>
-      <div className='mt-8'>
       <VerticalTabs/>
-      </div>
-      
-      
     </Box>
   );
 };
@@ -117,21 +120,38 @@ function VerticalTabs() {
   };
 
   return (
-    <Box sx={{ flexGrow: 1, display: 'flex', minHeight: '100vh', pt: 8 }}>
+    <Box sx={{ flexGrow: 1, display: 'flex', minHeight: '100vh', pt: '56px' }}>
       <Tabs
         orientation="vertical"
         variant="scrollable"
+        scrollButtons="auto"
         value={value}
         onChange={handleChange}
         aria-label="Sprint dashboard tabs"
-        sx={{ borderRight: 1, borderColor: 'divider', minWidth: 160 }}
+        sx={{
+          minWidth: 168,
+          bgcolor: 'background.paper',
+          borderRight: 1,
+          borderColor: 'divider',
+          boxShadow: '4px 0 24px rgba(15, 23, 42, 0.05)',
+          pt: 1,
+          '& .MuiTab-root': {
+            textTransform: 'none',
+            alignItems: 'flex-start',
+            fontWeight: 600,
+            color: '#64748b',
+            minHeight: 48,
+            '&.Mui-selected': { color: '#4338ca', bgcolor: 'rgba(79, 70, 229,0.08)' },
+          },
+          '& .MuiTabs-indicator': { left: 0, width: 3, borderRadius: '0 4px 4px 0', bgcolor: '#4f46e5' },
+        }}
       >
         <Tab label="Home" />
         <Tab label="Sprint table" />
         <Tab label="Tasks" />
         <Tab label="Burndown" />
       </Tabs>
-      <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+      <Box sx={{ flexGrow: 1, overflow: 'auto', minWidth: 0 }}>
         <TabPanel value={value} index={0}>
           <SHome />
         </TabPanel>

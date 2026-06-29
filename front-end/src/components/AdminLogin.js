@@ -71,7 +71,7 @@ function AdminLogin() {
         <>
           <Link
             to="/forget"
-            className="font-semibold text-teal-700 hover:text-teal-800"
+            className="font-semibold text-indigo-700 hover:text-indigo-800"
           >
             Forgot password?
           </Link>
@@ -119,7 +119,7 @@ function AdminLogin() {
           <div
             className={`text-center text-sm rounded-xl py-2.5 px-3 ${
               message.includes("successful")
-                ? "bg-emerald-50 text-emerald-800"
+                ? "bg-violet-50 text-violet-800"
                 : "bg-red-50 text-red-700"
             }`}
           >

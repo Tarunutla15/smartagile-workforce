@@ -57,10 +57,10 @@ function maxInList(items, getNum) {
   return Math.max(1, ...items.map((x) => getNum(x) || 0));
 }
 
-const accent = { main: "#0d9488", light: "rgba(13, 148, 136, 0.12)", line: "rgba(13, 148, 136, 0.45)" };
+const accent = { main: "#4f46e5", light: "rgba(79, 70, 229, 0.12)", line: "rgba(79, 70, 229, 0.45)" };
 const warm = { line: "rgba(217, 119, 6, 0.4)", bg: "rgba(245, 158, 11, 0.12)" };
 const rankColor = (i) => {
-  if (i === 0) return { bg: "rgba(13, 148, 136, 0.2)", fg: "#0f766e" };
+  if (i === 0) return { bg: "rgba(79, 70, 229, 0.2)", fg: "#4338ca" };
   if (i === 1) return { bg: "rgba(100, 116, 139, 0.18)", fg: "#475569" };
   if (i === 2) return { bg: "rgba(180, 83, 9, 0.12)", fg: "#b45309" };
   return { bg: "action.hover", fg: "text.secondary" };
@@ -224,8 +224,8 @@ function SwitchPairCarousel({ pairs }) {
                 borderColor: (t) => t.palette.divider,
                 background: (t) =>
                   t.palette.mode === "dark"
-                    ? "linear-gradient(160deg, rgba(13,148,136,0.1) 0%, rgba(15,23,42,0.6) 100%)"
-                    : "linear-gradient(160deg, rgba(13,148,136,0.08) 0%, #fff 50%)",
+                    ? "linear-gradient(160deg, rgba(79, 70, 229,0.1) 0%, rgba(15,23,42,0.6) 100%)"
+                    : "linear-gradient(160deg, rgba(79, 70, 229,0.08) 0%, #fff 50%)",
                 boxShadow: "0 2px 12px rgba(15,23,42,0.06)",
               }}
             >
@@ -372,8 +372,8 @@ export default function IntelligenceInsights() {
   const panelGradient = useMemo(
     () =>
       isDark
-        ? "linear-gradient(135deg, rgba(13,148,136,0.15) 0%, rgba(15,23,42,0.95) 40%, #0f172a 100%)"
-        : "linear-gradient(135deg, #f0fdfa 0%, #ffffff 35%, #f8fafc 100%)",
+        ? "linear-gradient(135deg, rgba(79, 70, 229,0.15) 0%, rgba(15,23,42,0.95) 40%, #0f172a 100%)"
+        : "linear-gradient(135deg, #eef2ff 0%, #ffffff 35%, #f8fafc 100%)",
     [isDark]
   );
 
@@ -439,7 +439,7 @@ export default function IntelligenceInsights() {
           width: { xs: 120, md: 200 },
           height: 120,
           background: (t) =>
-            `radial-gradient(ellipse at top right, ${t.palette.mode === "dark" ? "rgba(13,148,136,0.25)" : "rgba(13,148,136,0.15)"} 0%, transparent 70%)`,
+            `radial-gradient(ellipse at top right, ${t.palette.mode === "dark" ? "rgba(79, 70, 229,0.25)" : "rgba(79, 70, 229,0.15)"} 0%, transparent 70%)`,
           pointerEvents: "none",
         },
       }}
@@ -464,7 +464,7 @@ export default function IntelligenceInsights() {
             cursor: "pointer",
             outline: "none",
             transition: "background-color 0.2s",
-            "&:hover": { bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(13,148,136,0.06)") },
+            "&:hover": { bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(79, 70, 229,0.06)") },
             "&:focus-visible": { boxShadow: (t) => `0 0 0 2px ${t.palette.primary.main}` },
             mb: 0.5,
           }}
