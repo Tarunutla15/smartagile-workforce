@@ -66,7 +66,7 @@ function TaskCard({ task, onStatusChange, onDelete, busyId }) {
         borderRadius: 2,
         border: "1px solid",
         borderColor: alpha(theme.palette.primary.main, 0.12),
-        bgcolor: "#fff",
+        bgcolor: "background.paper",
         transition: "box-shadow 0.2s, border-color 0.2s, transform 0.15s",
         "&:hover": {
           borderColor: alpha(theme.palette.primary.main, 0.35),
@@ -137,6 +137,8 @@ function TaskCard({ task, onStatusChange, onDelete, busyId }) {
 
 function Column({ status, tasks, onStatusChange, onDelete, busyId }) {
   const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+  const headingColor = isDark ? theme.palette.primary.light : theme.palette.primary.dark;
   const meta = statusMeta(status);
   const Icon = meta.Icon;
 
@@ -151,7 +153,7 @@ function Column({ status, tasks, onStatusChange, onDelete, busyId }) {
         overflow: "hidden",
         border: "1px solid",
         borderColor: alpha(theme.palette.divider, 0.9),
-        bgcolor: alpha(theme.palette.grey[50], 0.8),
+        bgcolor: isDark ? alpha(theme.palette.common.white, 0.03) : alpha(theme.palette.grey[50], 0.8),
         display: "flex",
         flexDirection: "column",
         minHeight: 360,
@@ -163,14 +165,14 @@ function Column({ status, tasks, onStatusChange, onDelete, busyId }) {
           py: 1.5,
           borderBottom: "1px solid",
           borderColor: alpha(theme.palette.divider, 0.9),
-          bgcolor: alpha(theme.palette.primary.main, 0.06),
+          bgcolor: alpha(theme.palette.primary.main, isDark ? 0.16 : 0.06),
           display: "flex",
           alignItems: "center",
           gap: 1,
         }}
       >
         <Icon sx={{ color: "primary.main", fontSize: 22 }} />
-        <Typography variant="subtitle2" fontWeight={700} color="primary.dark">
+        <Typography variant="subtitle2" fontWeight={700} sx={{ color: headingColor }}>
           {meta.label}
         </Typography>
         <Chip
@@ -180,8 +182,8 @@ function Column({ status, tasks, onStatusChange, onDelete, busyId }) {
             ml: "auto",
             height: 22,
             fontWeight: 700,
-            bgcolor: alpha(theme.palette.primary.main, 0.12),
-            color: "primary.dark",
+            bgcolor: alpha(theme.palette.primary.main, isDark ? 0.24 : 0.12),
+            color: headingColor,
           }}
         />
       </Box>
@@ -342,7 +344,7 @@ const Tasks = () => {
             sx={{
               fontWeight: 800,
               letterSpacing: "-0.02em",
-              color: "primary.dark",
+              color: (t) => (t.palette.mode === "dark" ? t.palette.primary.light : t.palette.primary.dark),
             }}
           >
             My tasks
@@ -362,7 +364,7 @@ const Tasks = () => {
             alignSelf: { xs: "flex-end", sm: "center" },
             border: "1px solid",
             borderColor: alpha(theme.palette.primary.main, 0.25),
-            bgcolor: "#fff",
+            bgcolor: "background.paper",
           }}
         >
           <RefreshRoundedIcon color="primary" />
@@ -394,8 +396,8 @@ const Tasks = () => {
           borderColor: alpha(theme.palette.primary.main, 0.15),
           background: `linear-gradient(135deg, ${alpha(
             theme.palette.primary.main,
-            0.06
-          )} 0%, #fff 48%)`,
+            theme.palette.mode === "dark" ? 0.18 : 0.06
+          )} 0%, ${theme.palette.background.paper} 48%)`,
         }}
         component="form"
         onSubmit={addTask}
@@ -422,7 +424,7 @@ const Tasks = () => {
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 2,
-                  bgcolor: "#fff",
+                  bgcolor: "background.paper",
                 },
               }}
             />
@@ -433,7 +435,7 @@ const Tasks = () => {
                 label="Initial column"
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value)}
-                sx={{ borderRadius: 2, bgcolor: "#fff" }}
+                sx={{ borderRadius: 2, bgcolor: "background.paper" }}
               >
                 {STATUSES.map((s) => (
                   <MenuItem key={s.value} value={s.value}>

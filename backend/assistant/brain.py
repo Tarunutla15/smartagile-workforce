@@ -555,6 +555,8 @@ def generate_assistant_reply(
     user_text: str,
     *,
     session_id: int | None = None,
+    scope: str | None = None,
+    project_id: int | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """
     Return (visible_markdownish_text, structured_json for result_json).
@@ -562,4 +564,6 @@ def generate_assistant_reply(
     """
     from .graph.runner import run_assistant_graph
 
-    return run_assistant_graph(user, user_text, session_id=session_id)
+    return run_assistant_graph(
+        user, user_text, session_id=session_id, scope=scope, project_id=project_id
+    )

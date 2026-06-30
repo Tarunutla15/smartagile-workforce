@@ -37,6 +37,9 @@ function App() {
         <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
         <Route path="/employee-profiles" element={<UserProfile />} />
         <Route path="/group/dashboard" element={<GroupDashboard />} />
+        {/* Shared sprint board: any authenticated member can view their projects' sprints
+            and update their own items (the dashboard graphs read from those updates). */}
+        <Route path="/sprint-dashboard" element={<SprintDashboard />} />
         <Route
           path="/admin/dashboard"
           element={
@@ -64,8 +67,9 @@ function App() {
         <Route path="/application-details/:appName" element={<ApplicationDetails />} />
         {/* Add other routes as needed */}
       </Routes>
+      {/* Inside the router so the assistant can navigate; outside Routes so it persists. */}
+      <AssistantChatWidget />
     </BrowserRouter>
-    <AssistantChatWidget />
     </>
   );
 }

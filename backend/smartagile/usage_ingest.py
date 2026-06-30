@@ -41,6 +41,14 @@ def normalize_usage_events(raw_list):
         if not isinstance(context, str):
             context = str(context)
         context = context[:1024]
+        url = item.get("url", "") or ""
+        if not isinstance(url, str):
+            url = str(url)
+        url = url[:1024]
+        domain = item.get("domain", "") or ""
+        if not isinstance(domain, str):
+            domain = str(domain)
+        domain = domain.strip().lower()[:256]
         category = item.get("category", "") or ""
         if not isinstance(category, str):
             category = str(category)
@@ -69,6 +77,11 @@ def normalize_usage_events(raw_list):
         clicks = _f("clicks", 0)
         scrolls = _f("scrolls", 0)
 
+        client_event_id = item.get("client_event_id", "") or ""
+        if not isinstance(client_event_id, str):
+            client_event_id = str(client_event_id)
+        client_event_id = client_event_id.strip()[:64]
+
         occurred_raw = item.get("occurred_at")
         occurred_at = None
         if occurred_raw:
@@ -90,12 +103,15 @@ def normalize_usage_events(raw_list):
                 "name": name,
                 "context": context,
                 "category": category,
+                "url": url,
+                "domain": domain,
                 "duration_seconds": duration_seconds,
                 "idle_seconds": idle_seconds,
                 "keystrokes": keystrokes,
                 "clicks": clicks,
                 "scrolls": scrolls,
                 "occurred_at": occurred_at,
+                "client_event_id": client_event_id,
             }
         )
 

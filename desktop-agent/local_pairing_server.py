@@ -14,6 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import urlparse
 
+import agent_status
 import auth_store
 import auth_session
 
@@ -68,6 +69,9 @@ class _Handler(BaseHTTPRequestHandler):
                 "port": pairing_port(),
                 "paired_user_id": paired_user_id,
                 "api_base": auth_store.get_api_base(),
+                # Live upload state so Settings can show "tracking active" vs.
+                # "reconnect needed" (e.g. a silently expired token).
+                "upload": agent_status.snapshot(),
             }
         ).encode("utf-8")
         self.send_response(200)

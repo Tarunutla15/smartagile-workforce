@@ -12,23 +12,22 @@ import Attendance from './Attendance';
 import Projects from './Projects';
 import AppsWebsites from './AppsWebsites';
 import Settings from './Settings';
-import AppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Avatar from '@mui/material/Avatar';
+import Tooltip from '@mui/material/Tooltip';
 import CssBaseline from '@mui/material/CssBaseline';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import { useNavigate, useLocation } from 'react-router-dom';
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, MenuItem } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
 import { AppDataContext } from './AppDataProvider';
 import { useSession } from '../../context/SessionContext';
 import { api, mediaUrl } from '../../api/client';
 import TrackingDisclosureDialog from '../../components/TrackingDisclosureDialog';
 import { DarkModeIconButton } from '../../theme/DarkModeToggle';
+import DashboardAppBar, { headerIconSx } from '../../components/DashboardAppBar';
+import NotificationsBell from '../../components/NotificationsBell';
 
 const EmployeeDashboard = () => {
   const navigate = useNavigate();
@@ -69,7 +68,7 @@ const EmployeeDashboard = () => {
   
     const menuItems = [
       { text: 'Organization (admin)', path: '/admin/dashboard', adminOnly: true },
-      { text: 'Sprint dashboard', path: '/admin/sprint-dashboard', adminOnly: true },
+      { text: 'Sprints', path: '/sprint-dashboard', adminOnly: false },
       { text: 'Employee profiles', path: '/admin/employee-profiles', adminOnly: true },
       { text: 'Group dashboard', path: '/group/dashboard', adminOnly: false },
       { text: 'Employee dashboard', path: '/employee/dashboard', adminOnly: false },
@@ -95,30 +94,16 @@ const EmployeeDashboard = () => {
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <TrackingDisclosureDialog />
       <CssBaseline />
-      <AppBar
-        position="fixed"
-        elevation={0}
-        sx={{
-          zIndex: (theme) => theme.zIndex.drawer + 1,
-          background: 'linear-gradient(90deg, #4338ca 0%, #4f46e5 45%, #3730a3 100%)',
-          boxShadow: '0 4px 24px rgba(67, 56, 202, 0.25)',
-        }}
-      >
-        <Toolbar
-          disableGutters
-          sx={{
-            minHeight: 56,
-            height: 56,
-            px: 2,
-            gap: 1,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <IconButton edge="start" color="inherit" aria-label="Open navigation menu" onClick={handleMenuOpen}>
-            <MenuIcon />
-          </IconButton>
-          <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+      <DashboardAppBar
+        subtitle="My workspace"
+        onMenuOpen={handleMenuOpen}
+        navMenu={
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+            slotProps={{ paper: { sx: { mt: 1, borderRadius: 2, minWidth: 220 } } }}
+          >
             {menuItems.map(
               (item) =>
                 item.path !== currentPath && (
@@ -128,62 +113,90 @@ const EmployeeDashboard = () => {
                 )
             )}
           </Menu>
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, letterSpacing: '-0.02em' }}>
-            SmartAgile
-          </Typography>
-          <Box sx={{ flex: 1, minWidth: 8 }} />
-          <DarkModeIconButton />
-          <IconButton
-            color="inherit"
-            aria-label="Refresh usage data"
-            onClick={() => refreshUsageData?.()}
-            disabled={usageLoading}
-            size="small"
-            sx={{ '&:disabled': { color: 'rgba(255,255,255,0.5)' } }}
-          >
-            <RefreshRoundedIcon
-              sx={{
-                animation: usageLoading ? 'spin 0.8s linear infinite' : 'none',
-                '@keyframes spin': {
-                  from: { transform: 'rotate(0deg)' },
-                  to: { transform: 'rotate(360deg)' },
-                },
-              }}
-            />
-          </IconButton>
-          <IconButton color="inherit" aria-label="Account menu" onClick={handleMenuOpen1} size="small">
-            <Avatar
-              alt=""
-              src={user?.profile_photo ? mediaUrl(user.profile_photo) : ''}
-              sx={{ width: 32, height: 32 }}
-            />
-          </IconButton>
-          <Menu anchorEl={anchorE2} open={Boolean(anchorE2)} onClose={handleMenuClose1} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
-            {accountMenuItems.map((item) =>
-              item.type === 'logout' ? (
-                <MenuItem
-                  key={item.text}
-                  onClick={() => {
-                    handleMenuClose1();
-                    handleLogout();
+        }
+        actions={
+          <>
+            <DarkModeIconButton sx={headerIconSx} />
+            <NotificationsBell sx={headerIconSx} />
+            <Tooltip title="Refresh usage data">
+              <span>
+                <IconButton
+                  sx={{ ...headerIconSx, '&:disabled': { color: 'rgba(255,255,255,0.5)' } }}
+                  aria-label="Refresh usage data"
+                  onClick={() => refreshUsageData?.()}
+                  disabled={usageLoading}
+                  size="small"
+                >
+                  <RefreshRoundedIcon
+                    fontSize="small"
+                    sx={{
+                      animation: usageLoading ? 'spin 0.8s linear infinite' : 'none',
+                      '@keyframes spin': {
+                        from: { transform: 'rotate(0deg)' },
+                        to: { transform: 'rotate(360deg)' },
+                      },
+                    }}
+                  />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </>
+        }
+        account={
+          <>
+            <Tooltip title={user?.username || user?.email || 'Account'}>
+              <IconButton aria-label="Account menu" onClick={handleMenuOpen1} size="small" sx={{ ml: 0.5, p: 0.25 }}>
+                <Avatar
+                  alt={user?.username || ''}
+                  src={user?.profile_photo ? mediaUrl(user.profile_photo) : ''}
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    bgcolor: 'rgba(255,255,255,0.20)',
+                    color: '#fff',
+                    boxShadow: '0 0 0 2px rgba(255,255,255,0.55)',
                   }}
                 >
-                  {item.text}
-                </MenuItem>
-              ) : (
-                <MenuItem component={Link} to={item.path} onClick={handleMenuClose1} key={item.path}>
-                  {item.text}
-                </MenuItem>
-              )
-            )}
-          </Menu>
-        </Toolbar>
-      </AppBar>
+                  {(user?.username?.[0] || user?.email?.[0] || '?').toUpperCase()}
+                </Avatar>
+              </IconButton>
+            </Tooltip>
+            <Menu
+              anchorEl={anchorE2}
+              open={Boolean(anchorE2)}
+              onClose={handleMenuClose1}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              slotProps={{ paper: { sx: { mt: 1, borderRadius: 2, minWidth: 180 } } }}
+            >
+              {accountMenuItems.map((item) =>
+                item.type === 'logout' ? (
+                  <MenuItem
+                    key={item.text}
+                    onClick={() => {
+                      handleMenuClose1();
+                      handleLogout();
+                    }}
+                  >
+                    {item.text}
+                  </MenuItem>
+                ) : (
+                  <MenuItem component={Link} to={item.path} onClick={handleMenuClose1} key={item.path}>
+                    {item.text}
+                  </MenuItem>
+                )
+              )}
+            </Menu>
+          </>
+        }
+      />
       <VerticalTabs />
     </Box>
   );
 };
-const APP_BAR_HEIGHT = 56;
+const APP_BAR_HEIGHT = 64;
 const SIDEBAR_WIDTH = 72;
 
 const a11yProps = (index) => ({

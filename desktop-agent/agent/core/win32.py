@@ -18,6 +18,10 @@ PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+try:
+    version = ctypes.WinDLL("version", use_last_error=True)
+except OSError:  # pragma: no cover - version.dll is always present on Windows
+    version = None
 
 user32.GetForegroundWindow.argtypes = ()
 user32.GetForegroundWindow.restype = wintypes.HWND
@@ -61,6 +65,19 @@ kernel32.QueryFullProcessImageNameW.argtypes = [
     ctypes.POINTER(wintypes.DWORD),
 ]
 kernel32.QueryFullProcessImageNameW.restype = wintypes.BOOL
+
+if version is not None:
+    version.GetFileVersionInfoSizeW.argtypes = (wintypes.LPCWSTR, ctypes.POINTER(wintypes.DWORD))
+    version.GetFileVersionInfoSizeW.restype = wintypes.DWORD
+    version.GetFileVersionInfoW.argtypes = (wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p)
+    version.GetFileVersionInfoW.restype = wintypes.BOOL
+    version.VerQueryValueW.argtypes = (
+        ctypes.c_void_p,
+        wintypes.LPCWSTR,
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(wintypes.UINT),
+    )
+    version.VerQueryValueW.restype = wintypes.BOOL
 
 
 class LASTINPUTINFO(ctypes.Structure):
@@ -106,6 +123,41 @@ def process_image_path(pid) -> str:
     finally:
         kernel32.CloseHandle(h)
     return ""
+
+
+def file_description(path: str) -> str:
+    """
+    Friendly app name from the executable's version resource ``FileDescription`` -- the
+    same label Task Manager / Digital Wellbeing show (e.g. ``Code.exe`` -> "Visual Studio
+    Code"). Returns "" for packaged/UWP apps or anything without version info.
+    """
+    if version is None or not path:
+        return ""
+    try:
+        size = version.GetFileVersionInfoSizeW(path, None)
+        if not size:
+            return ""
+        block = ctypes.create_string_buffer(size)
+        if not version.GetFileVersionInfoW(path, 0, size, block):
+            return ""
+
+        ptr = ctypes.c_void_p()
+        length = wintypes.UINT()
+        # Pick the first language/codepage pair, then read its FileDescription string.
+        if not version.VerQueryValueW(
+            block, r"\VarFileInfo\Translation", ctypes.byref(ptr), ctypes.byref(length)
+        ) or not length.value:
+            return ""
+        lang, codepage = ctypes.cast(ptr, ctypes.POINTER(wintypes.WORD * 2)).contents
+        sub_block = f"\\StringFileInfo\\{lang:04x}{codepage:04x}\\FileDescription"
+        if not version.VerQueryValueW(
+            block, sub_block, ctypes.byref(ptr), ctypes.byref(length)
+        ) or not length.value:
+            return ""
+        value = ctypes.wstring_at(ptr, length.value).strip("\x00").strip()
+        return value
+    except Exception:  # noqa: BLE001 - naming is best-effort, never fatal
+        return ""
 
 
 def seconds_since_last_input() -> float:

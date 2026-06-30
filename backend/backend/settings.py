@@ -59,6 +59,15 @@ CELERY_BEAT_SCHEDULE = (
             "schedule": crontab(hour=7, minute=30, day_of_week=1),  # Monday
             "args": ("weekly",),
         },
+        # Proactive nudges: scan for at-risk sprints (hourly) and personal work/focus (daily).
+        "nudges-sprint-risks": {
+            "task": "smartagile.tasks.scan_sprint_risks_task",
+            "schedule": crontab(minute=0),  # top of every hour
+        },
+        "nudges-personal": {
+            "task": "smartagile.tasks.scan_personal_nudges_task",
+            "schedule": crontab(hour=8, minute=15),  # once a day, morning
+        },
     }
     if crontab is not None
     else {}
@@ -92,6 +101,7 @@ INSTALLED_APPS = [
     'smartagile',
     'assistant',
     'tasks',
+    'sprints',
     'corsheaders',
     'allauth',
     'allauth.account',

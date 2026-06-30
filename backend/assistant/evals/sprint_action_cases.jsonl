@@ -1,0 +1,11 @@
+{"message": "show me the burndown", "expect_action": "burndown"}
+{"message": "create a sprint called Alpha", "expect_action": "create_sprint"}
+{"message": "start the sprint", "expect_action": "start_sprint"}
+{"message": "complete the sprint and move unfinished to backlog", "expect_action": "complete_sprint"}
+{"message": "add a task 'Login bug' to sprint Alpha", "expect_action": "add_item"}
+{"message": "move 'Login bug' to backlog", "expect_action": "move_item"}
+{"message": "mark 'Login bug' as done", "expect_action": "set_status"}
+{"message": "list the sprints", "expect_action": "list_sprints"}
+{"message": "what tasks are assigned to me", "expect_action": "list_items"}
+{"message": "who is in my team", "expect_action": "team"}
+{"message": "how is the sprint going", "expect_action": "status"}

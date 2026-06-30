@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AuthSessionEvent, UsageDailyRollup, UsageEvent
+from .models import AuthSessionEvent, KnowledgeChunk, UsageDailyRollup, UsageEvent
 
 
 @admin.register(AuthSessionEvent)
@@ -24,3 +24,12 @@ class UsageEventAdmin(admin.ModelAdmin):
     list_filter = ("source_type",)
     search_fields = ("user__email", "name", "context")
     date_hierarchy = "occurred_at"
+
+
+@admin.register(KnowledgeChunk)
+class KnowledgeChunkAdmin(admin.ModelAdmin):
+    list_display = ("id", "project", "source_type", "source_id", "title", "updated_at")
+    list_filter = ("source_type",)
+    search_fields = ("title", "text")
+    raw_id_fields = ("project", "task", "sprint")
+    readonly_fields = ("content_hash", "updated_at")

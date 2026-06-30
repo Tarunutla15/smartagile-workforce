@@ -29,7 +29,10 @@ The tracker is split into a core pipeline plus an optional plugin layer:
 agent/
   core/      window_tracker · input_tracker · idle_tracker · classifier · uploader · auth · engine · single_instance
   plugins/   base · registry · browser_plugin · vscode_plugin · outlook_plugin · app_plugin
-continous_task.py   # thin entrypoint (start/stop + pairing server + single-instance guard)
+continous_task.py     # thin entrypoint (start/stop + pairing server + single-instance guard + engine watchdog)
+http_batch_writer.py  # resilient upload loop (retry, idempotent batches, status reporting)
+agent_status.py       # in-process upload status shared with the pairing server /health
+local_pairing_server.py  # localhost token pairing + /health (now includes live upload status)
 ```
 
 > **Run only one agent at a time.** Two agents on the same PC both track the same
@@ -42,21 +45,50 @@ continous_task.py   # thin entrypoint (start/stop + pairing server + single-inst
 
 | Window | Default | With plugin |
 |--------|---------|-------------|
-| `chrome.exe` · "React Tutorial - YouTube" | Google Chrome | **YouTube** · "React Tutorial" |
-| `chrome.exe` · "asyncio … - Stack Overflow" | Google Chrome | **Stack Overflow** · "asyncio …" |
+| `chrome.exe` · "React Tutorial - YouTube" | Google Chrome · (session) | **Google Chrome** · "YouTube - React Tutorial" |
+| `chrome.exe` · "asyncio … - Stack Overflow" | Google Chrome · (session) | **Google Chrome** · "Stack Overflow - asyncio …" |
 | `Cursor.exe` · "● engine.py - smartagile - Cursor" | Cursor · (session) | **Cursor** · "engine.py - smartagile" |
+
+Browsers stay **one card per browser** (Chrome/Edge/Brave); the site + page go in the
+activity, so tabs are listed inside that card rather than fragmenting into many per-site apps.
 
 If no plugin matches (or one errors), the engine falls back to the original behaviour
 (ML category + exe→software name). Disable all specialised plugins with
 `SMARTAGILE_PLUGINS=off`.
 
-### Optional: real browser URLs
+### Browser URLs (on by default)
 
-By default the agent only sees window **titles**. Set `SMARTAGILE_BROWSER_URL=1` (and
-`pip install uiautomation`) to additionally read the active tab's **URL** via Windows UI
-Automation. When captured, the domain improves the site label and `url`/`domain` are added
-to each browser event. This is best-effort and fragile — it degrades silently to title-only
-when the dependency is missing or the address bar can't be read.
+Beyond the window **title**, the agent reads the active tab's **URL** via Windows UI
+Automation (`uiautomation`). This is **on by default**; disable with
+`SMARTAGILE_BROWSER_URL=0`. For each browser event it then:
+
+- stores the `url` and registrable `domain` on the event (persisted by the backend), and
+- uses the domain for a **deterministic category** — e.g. `github.com`/`docs.google.com`
+  → `work`, `youtube.com`/`reddit.com` → `entertainment` — overriding the noisier
+  title-based ML guess (`agent/plugins/browser_plugin.py`), and labels the site in the
+  activity (e.g. `YouTube - React Tutorial`) while keeping the browser as the app card.
+
+Capture is best-effort and fragile (active tab only, depends on the browser's accessibility
+tree) — it degrades silently to title-only when the address bar can't be read. The full URL
+(including query string) is stored; trim to domain-only in `browser_url.py` /
+`usage_ingest.py` if you prefer.
+
+### Accurate names & noise filtering
+
+To behave like a proper digital-wellbeing tracker (rather than dumping raw process names):
+
+- **Display names** — apps resolve to friendly names like Task Manager / Digital Wellbeing
+  show: a curated override map, then `exe_to_software.json`, then the executable's version
+  resource **`FileDescription`** (`Code.exe` → "Visual Studio Code"), then the exe stem
+  (`agent/core/classifier.py`, `agent/core/win32.py:file_description`).
+- **System / lock filtering** — OS surfaces (`LockApp`, `SearchHost`, `ShellExperienceHost`,
+  `CredentialUIBroker`, `WidgetBoard`, `dwm`, …) are dropped, not recorded, so the lock
+  screen and shell chrome no longer count as "work" (`agent/core/ignore.py`). `LockApp`
+  also marks the machine as locked/away.
+- **Deterministic categories** — known executables override the ML guess (which tends to
+  label unknown apps "work"): editors/terminals/DB tools → `work`, Teams/Slack/WhatsApp/
+  Outlook → `communication`, Spotify/Steam/VLC → `entertainment`
+  (`_APP_CATEGORY` in `classifier.py`). Browser domains do the same (see above).
 
 ---
 
@@ -83,9 +115,9 @@ Leave the process running while you want tracking enabled. **Run only one copy**
 second one double-counts usage (the built `.exe` blocks this automatically; see
 *Architecture*).
 
-Two extras are **commented out** in `requirements.txt` — uncomment/install them only if
-needed: `uiautomation` (real browser URLs, `SMARTAGILE_BROWSER_URL=1`) and `pyinstaller`
-(building the `.exe`, see *Packaging*).
+`pyinstaller` (for building the `.exe`, see *Packaging*) is the one extra left **commented
+out** in `requirements.txt`; install it only when you need to build. Browser-URL capture
+(`uiautomation`) is now a normal dependency and on by default — see below.
 
 ---
 
@@ -128,7 +160,7 @@ Both must match.
 | `SMARTAGILE_LOCAL_PORT` | `38475` | Localhost pairing HTTP port |
 | `SMARTAGILE_ACCESS_TOKEN` | — | Optional JWT override (skips `auth.json`; dev only) |
 | `SMARTAGILE_PLUGINS` | `on` | Set `off` to disable per-app context plugins |
-| `SMARTAGILE_BROWSER_URL` | `0` | Set `1` to capture active-tab URLs (needs `uiautomation`) |
+| `SMARTAGILE_BROWSER_URL` | `on` | Capture active-tab URL + domain (uses `uiautomation`); set `0` to disable |
 
 ---
 
@@ -210,8 +242,45 @@ Tokens expire — pairing from Settings is preferred.
 - Batch interval: ~2 seconds, up to 48 events per request
 - Endpoint: `{SMARTAGILE_API_BASE}/api/usage-events/batch/`
 - Auth: `Authorization: Bearer <access_token>`
+- Optional header: `X-SmartAgile-Agent-Version: <build>` (recorded as the agent version server-side)
 
 Until paired, the agent logs once: *“Not paired yet…”* and drops batches (normal until you connect from Settings).
+
+---
+
+## Reliability & resilience
+
+The data pipeline is built so tracking **never stops silently**:
+
+- **Crash-proof tracking loop** — each iteration of the engine loop is guarded; a transient
+  error (COM hiccup, plugin edge case, bad foreground read) is logged and the loop
+  continues instead of killing the thread (`agent/core/engine.py`).
+- **Engine watchdog** — `continous_task.py` checks the tracking thread every 2 s and restarts
+  a fresh `TrackingEngine` if it ever dies. The uploader has the same self-healing
+  (`Uploader._ensure_alive`).
+- **Upload loop never dies** — `http_batch_writer.py` catches all `requests` exceptions and a
+  final catch-all; transient failures (network blips, sleep/wake, server restarts, 408/429/5xx)
+  keep events **buffered and retried**, bounded by `MAX_PENDING_EVENTS` so memory can't grow
+  without limit.
+- **Idempotent batches** — every segment carries a `client_event_id` (UUID). The backend
+  de-dupes on `(user, client_event_id)` (`bulk_create(ignore_conflicts=True)`), so a batch the
+  agent retries after an unclear/transient failure is **never double-counted**.
+- **Multi-user safety** — each event is tagged with the account paired at capture time; if the
+  PC is re-paired to another user while events are still buffered, the old user's events are
+  dropped rather than uploaded under the new account (`_purge_foreign_user`).
+- **Status surfacing** — the upload loop records its outcome in `agent_status.py`, exposed via
+  the pairing server `/health`. Settings shows **tracking active / last upload time**, a
+  **temporary issue (retrying)** warning, or a **reconnect needed** prompt when the saved
+  session expired — so an expired token is no longer a silent failure.
+- **Server readiness** — the agent can probe `GET /api/health/` (DB-backed `200`/`503`) to tell
+  a real outage from a cold start, and the backend records a per-user heartbeat
+  (`GET /api/agent/status/` → `connected`, `last_seen_at`, `last_event_at`).
+
+> **Known limitation — day boundaries use the server timezone.** Usage is stored with a UTC
+> `occurred_at` and bucketed into days using the backend's configured `TIME_ZONE`, not each
+> user's local timezone. Activity near midnight for users in a different timezone can land in
+> the adjacent day. Fixing this properly means storing a per-user timezone and bucketing per
+> user; it touches all analytics/rollup queries, so it is intentionally deferred.
 
 ---
 
@@ -244,8 +313,10 @@ Do not delete or relocate `models/` — the agent loads them at startup.
 | Symptom | What to check |
 |---------|----------------|
 | Settings shows “agent offline” | Agent running? Port 38475 free? |
+| Settings shows “session expired — reconnect” | Token expired; click **Connect** again to re-pair (data keeps buffering until then) |
 | 401 errors in agent log | Re-login in browser; pair again |
-| No data in dashboard | Backend up? Wait 1–2 min after using apps |
+| No data in dashboard | Backend up? Probe `GET /api/health/`; wait 1–2 min after using apps |
+| Usage not double-counted after a retry | Expected — batches are idempotent via `client_event_id` |
 | Usage looks doubled | Two agents running at once. The guard prevents this on a rebuilt exe; otherwise `Get-Process SmartAgileAgent \| Stop-Process -Force` and run only one (also stop any `py continous_task.py` dev run) |
 | Build: `Access is denied …dist\SmartAgileAgent.exe` | Exe still running/locked — stop all `SmartAgileAgent` processes (see Packaging) |
 | Import / sklearn errors | `pip install -r requirements.txt`; Python 3.10–3.12 |

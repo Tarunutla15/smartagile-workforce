@@ -497,8 +497,14 @@ def compute_metric_trend(
         exact = base.filter(name__iexact=nm)
         base = exact if exact.exists() else base.filter(name__icontains=nm)
     elif bm == "time_on_site" and site_query:
+        sq = site_query.strip()
         base = base.filter(
-            source_type=UsageEvent.SourceType.BROWSER, context__icontains=site_query.strip()
+            Q(source_type=UsageEvent.SourceType.BROWSER)
+            & (
+                Q(domain__icontains=sq)
+                | Q(context__icontains=sq)
+                | Q(name__icontains=sq)
+            )
         )
 
     totals: dict[Any, float] = {}

@@ -45,7 +45,8 @@ import { useSession } from "../context/SessionContext";
 const DRAWER_W = 280;
 const SIDEBAR_BG = "#0b1220";
 const SIDEBAR_ACCENT = "#f59e0b";
-const MAIN_BG = "#f1f5f9";
+const MAIN_BG = (t) => (t.palette.mode === "dark" ? t.palette.background.default : "#f1f5f9");
+const HEAD_BG = (t) => (t.palette.mode === "dark" ? "rgba(148,163,184,0.16)" : "#e2e8f0");
 
 const TASK_STATUS = {
   todo: "To do",
@@ -221,7 +222,7 @@ export default function EmployeeProfiles() {
   const detailProjects = selected ? projectsForUser(projects, selected.id) : [];
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: MAIN_BG }}>
+    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: MAIN_BG, color: "text.primary" }}>
       <CssBaseline />
       <Drawer
         variant="permanent"
@@ -246,7 +247,7 @@ export default function EmployeeProfiles() {
           sx={{ mb: 3 }}
         >
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: 800, color: "#0f172a", letterSpacing: "-0.02em" }}>
+            <Typography variant="h4" sx={{ fontWeight: 800, color: "text.primary", letterSpacing: "-0.02em" }}>
               Employee profiles
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, maxWidth: 560 }}>
@@ -286,7 +287,7 @@ export default function EmployeeProfiles() {
           sx={{
             mb: 2,
             maxWidth: 400,
-            "& .MuiOutlinedInput-root": { bgcolor: "#fff", borderRadius: 2 },
+            "& .MuiOutlinedInput-root": { bgcolor: "background.paper", borderRadius: 2 },
           }}
           InputProps={{
             startAdornment: (
@@ -309,19 +310,13 @@ export default function EmployeeProfiles() {
         >
           <Table size="small" stickyHeader>
             <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 700, bgcolor: "#e2e8f0", py: 1.5 }}>Member</TableCell>
-                <TableCell sx={{ fontWeight: 700, bgcolor: "#e2e8f0" }}>Email</TableCell>
-                <TableCell sx={{ fontWeight: 700, bgcolor: "#e2e8f0" }}>Role</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, bgcolor: "#e2e8f0" }}>
-                  Assigned tasks
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, bgcolor: "#e2e8f0" }}>
-                  Open
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, bgcolor: "#e2e8f0" }}>
-                  Done
-                </TableCell>
+              <TableRow sx={{ "& th": { fontWeight: 700, bgcolor: HEAD_BG, color: "text.primary" } }}>
+                <TableCell sx={{ py: 1.5 }}>Member</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Role</TableCell>
+                <TableCell align="right">Assigned tasks</TableCell>
+                <TableCell align="right">Open</TableCell>
+                <TableCell align="right">Done</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -474,7 +469,7 @@ export default function EmployeeProfiles() {
                         <Paper
                           key={pr.id}
                           variant="outlined"
-                          sx={{ p: 1.5, borderRadius: 2, bgcolor: "#fff" }}
+                          sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.paper" }}
                         >
                           <Typography fontWeight={600}>{pr.name}</Typography>
                           <Typography variant="caption" color="text.secondary" display="block">
@@ -501,11 +496,11 @@ export default function EmployeeProfiles() {
                     <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
                       <Table size="small">
                         <TableHead>
-                          <TableRow sx={{ bgcolor: "#f8fafc" }}>
-                            <TableCell sx={{ fontWeight: 600 }}>Title</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Project</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Created</TableCell>
+                          <TableRow sx={{ "& th": { fontWeight: 600, bgcolor: HEAD_BG, color: "text.primary" } }}>
+                            <TableCell>Title</TableCell>
+                            <TableCell>Status</TableCell>
+                            <TableCell>Project</TableCell>
+                            <TableCell>Created</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>

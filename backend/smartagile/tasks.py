@@ -49,20 +49,33 @@ def persist_usage_events_batch(self, user_id: int, events: list):
                 name=e["name"],
                 context=e.get("context", "") or "",
                 category=e.get("category", "") or "",
+                url=e.get("url", "") or "",
+                domain=e.get("domain", "") or "",
                 duration_seconds=dur,
                 idle_seconds=min(dur, max(0.0, raw_idle)),
                 keystrokes=float(e.get("keystrokes", 0) or 0),
                 clicks=float(e.get("clicks", 0) or 0),
                 scrolls=float(e.get("scrolls", 0) or 0),
                 occurred_at=_parse_occurred_at(e.get("occurred_at")),
+                client_event_id=(e.get("client_event_id", "") or "")[:64],
             )
         )
+
+    # Attribute events to the active agile work item (if the user has a running timer).
+    try:
+        from sprints.attribution import attribute_events
+
+        attribute_events(int(user_id), to_create)
+    except Exception:
+        logger.exception("attribute_events failed user_id=%s (continuing)", user_id)
 
     total = 0
     try:
         for i in range(0, len(to_create), CHUNK):
             chunk = to_create[i : i + CHUNK]
-            UsageEvent.objects.bulk_create(chunk, batch_size=CHUNK)
+            # ignore_conflicts makes a retried batch idempotent: rows whose
+            # (user, client_event_id) already exist are skipped instead of duplicated.
+            UsageEvent.objects.bulk_create(chunk, batch_size=CHUNK, ignore_conflicts=True)
             total += len(chunk)
     except Exception as exc:
         logger.exception("persist_usage_events_batch failed user_id=%s", user_id)
@@ -200,6 +213,54 @@ def send_scheduled_usage_digests(frequency: str):
             )
     logger.info("send_scheduled_usage_digests(%s): sent %d digest(s)", frequency, sent)
     return sent
+
+
+@shared_task
+def scan_sprint_risks_task():
+    """Scheduled proactive scan: at-risk sprints → notify leads/managers."""
+    from .nudges import scan_sprint_risks
+
+    return scan_sprint_risks()
+
+
+@shared_task
+def scan_personal_nudges_task():
+    """Scheduled proactive scan: per-user due work + focus dips."""
+    from .nudges import scan_personal_nudges
+
+    return scan_personal_nudges()
+
+
+@shared_task
+def index_knowledge_task(kind: str, obj_id: int):
+    """Index a single agile source row into KnowledgeChunk (doc-RAG, Tier 2B).
+
+    Triggered (debounced) by post_save/post_delete signals. ``kind`` is one of
+    ``task`` | ``comment`` | ``sprint``.
+    """
+    from assistant import knowledge
+
+    indexer = {
+        "task": knowledge.index_task,
+        "comment": knowledge.index_comment,
+        "sprint": knowledge.index_sprint,
+    }.get(kind)
+    if indexer is None:
+        logger.warning("index_knowledge_task: unknown kind %r", kind)
+        return False
+    try:
+        return indexer(obj_id)
+    except Exception:
+        logger.exception("index_knowledge_task failed kind=%s id=%s", kind, obj_id)
+        return False
+
+
+@shared_task
+def reindex_knowledge_task():
+    """Full re-index of all agile content into KnowledgeChunk. Safe to run repeatedly."""
+    from assistant import knowledge
+
+    return knowledge.reindex_all()
 
 
 @shared_task

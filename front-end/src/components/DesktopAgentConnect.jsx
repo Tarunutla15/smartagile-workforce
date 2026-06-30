@@ -89,6 +89,36 @@ export default function DesktopAgentConnect() {
     return Boolean(agentOnline && health?.has_tokens && paired && current && paired !== current);
   }, [agentOnline, health, user]);
 
+  // Live upload status from the agent (see agent_status.py / pairing /health).
+  const upload = health?.upload || null;
+  const uploadStatus = useMemo(() => {
+    if (!agentOnline || !upload || !health?.has_tokens || pairedUserMismatch) return null;
+    const secs = upload.seconds_since_ok;
+    const ago =
+      secs == null ? "" : secs < 60 ? `${secs}s ago` : `${Math.round(secs / 60)} min ago`;
+    switch (upload.auth_state) {
+      case "needs_reconnect":
+        return {
+          severity: "error",
+          text: "Your saved session expired, so usage uploads have stopped. Click Connect again to re-pair this PC.",
+        };
+      case "ok":
+        return {
+          severity: "success",
+          text: upload.uploading
+            ? `Tracking active — last upload ${ago}.`
+            : `Connected. Last upload ${ago}.`,
+        };
+      case "transient":
+        return {
+          severity: "warning",
+          text: `Temporary upload issue (${upload.last_error || "retrying"}); the agent is retrying and keeping your data buffered.`,
+        };
+      default:
+        return null;
+    }
+  }, [agentOnline, upload, health, pairedUserMismatch]);
+
   return (
     <Box sx={{ mt: 1 }}>
       <Typography variant="subtitle2" fontWeight={700} gutterBottom>
@@ -122,6 +152,11 @@ export default function DesktopAgentConnect() {
             : health?.has_tokens
               ? `Agent is running and has saved tokens (paired user id ${health?.paired_user_id ?? "unknown"}). Usage will upload automatically.`
               : "Agent is running. Click the button to save your session to this PC."}
+        </Alert>
+      )}
+      {uploadStatus && (
+        <Alert severity={uploadStatus.severity} sx={{ mb: 1, py: 0.5 }}>
+          {uploadStatus.text}
         </Alert>
       )}
       <Button

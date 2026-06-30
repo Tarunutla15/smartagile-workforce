@@ -7,7 +7,7 @@ import DesktopAgentConnect from "../../components/DesktopAgentConnect";
 const Settings = () => {
   return (
     <Box>
-      <Typography variant="h5" fontWeight={700} gutterBottom sx={{ color: "#0f172a" }}>
+      <Typography variant="h5" fontWeight={700} gutterBottom sx={{ color: "text.primary" }}>
         Settings
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>

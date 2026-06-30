@@ -10,14 +10,15 @@ Notes:
   resolves it from ``sys._MEIPASS`` when frozen.
 - scikit-learn / pywinctl pull in submodules and data PyInstaller can't always see by
   static analysis, so we collect them explicitly below.
-- ``uiautomation`` (optional browser-URL capture) is intentionally NOT bundled; it is
-  imported lazily at runtime only when ``SMARTAGILE_BROWSER_URL=1``.
+- ``uiautomation`` (browser-URL capture) is bundled so the frozen exe can read the active
+  tab's domain. Capture still only runs when enabled (default on; ``SMARTAGILE_BROWSER_URL=0``
+  disables it).
 """
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 hiddenimports = []
-for pkg in ("sklearn", "pywinctl", "pymonctl", "pywinbox"):
+for pkg in ("sklearn", "pywinctl", "pymonctl", "pywinbox", "uiautomation", "comtypes"):
     try:
         hiddenimports += collect_submodules(pkg)
     except Exception:
@@ -26,15 +27,17 @@ hiddenimports += [
     "pynput.keyboard._win32",
     "pynput.mouse._win32",
     "comtypes",
+    "comtypes.client",
     "sklearn.utils._typedefs",
     "sklearn.neighbors._partition_nodes",
 ]
 
 datas = [("models", "models")]
-try:
-    datas += collect_data_files("sklearn")
-except Exception:
-    pass
+for pkg in ("sklearn", "uiautomation"):
+    try:
+        datas += collect_data_files(pkg)
+    except Exception:
+        pass
 
 a = Analysis(
     ["continous_task.py"],
@@ -45,7 +48,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=["matplotlib", "tkinter", "uiautomation"],
+    excludes=["matplotlib", "tkinter"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)

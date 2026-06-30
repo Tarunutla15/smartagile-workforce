@@ -1,21 +1,15 @@
-import React from 'react';
-import { LineChart, lineElementClasses } from '@mui/x-charts/LineChart';
+import React, { useEffect, useState } from 'react';
+import { LineChart } from '@mui/x-charts/LineChart';
 import { BarChart } from '@mui/x-charts/BarChart';
 import { Gauge, gaugeClasses } from '@mui/x-charts/Gauge';
-import { PieChart } from '@mui/x-charts/PieChart';
-import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import ToggleButton from '@mui/material/ToggleButton';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
 import { BRAND_CHART_COLORS } from '../../utils/chartTheme';
+import { getSprintReport, getSprintEffort } from '../../api/sprints';
+import { useSprint } from './SprintContext';
 
-const STAT_CARDS = [
-  { label: 'Sprint velocity', value: '23', unit: 'pts' },
-  { label: 'Office time', value: '08:39', unit: 'h' },
-  { label: 'Focus time', value: '06:12', unit: 'h' },
-  { label: 'Open tasks', value: '14', unit: '' },
-  { label: 'Completion', value: '78', unit: '%' },
-];
+const hours = (h) => (h == null ? '0' : Number(h).toFixed(1));
 
 const StatCard = ({ label, value, unit }) => (
   <div className="sa-card sa-card-hover flex-1 min-w-[160px] p-4">
@@ -36,75 +30,142 @@ const Panel = ({ title, subtitle, children }) => (
 );
 
 const SHome = () => {
+  const { sprintId, selectedSprint, refreshKey } = useSprint();
+  const [report, setReport] = useState(null);
+  const [effort, setEffort] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!sprintId) {
+      setReport(null);
+      setEffort(null);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    setError('');
+    Promise.all([getSprintReport(sprintId), getSprintEffort(sprintId)])
+      .then(([rep, eff]) => {
+        if (!active) return;
+        setReport(rep);
+        setEffort(eff);
+      })
+      .catch(() => active && setError('Could not load sprint analytics.'))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [sprintId, refreshKey]);
+
+  if (!sprintId) {
+    return (
+      <div className="mx-auto max-w-[1280px]">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Sprint overview</h1>
+        <Alert severity="info" sx={{ mt: 2 }}>
+          No sprint selected. Create one in the <strong>Sprints</strong> tab to see velocity, burndown and focus time.
+        </Alert>
+      </div>
+    );
+  }
+
+  const summary = report?.summary;
+  const velocity = report?.velocity;
+  const burndown = report?.burndown;
+  const distribution = report?.distribution;
+
+  const statCards = [
+    { label: 'Sprint velocity', value: velocity ? velocity.average_velocity : '—', unit: 'pts' },
+    { label: 'Office time', value: hours(effort?.office_hours), unit: 'h' },
+    { label: 'Focus time', value: hours(effort?.focus_hours), unit: 'h' },
+    { label: 'Open tasks', value: summary ? summary.open_count : '—', unit: '' },
+    { label: 'Completion', value: summary ? summary.completion_pct : '—', unit: '%' },
+  ];
+
   return (
     <div className="mx-auto max-w-[1280px]">
       <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Sprint overview</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Velocity, burndown and task health for the active sprint.</p>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        {selectedSprint ? selectedSprint.name : 'Active sprint'} · velocity, burndown and focus time.
+      </p>
 
-      <div className="mt-5 flex flex-wrap gap-3">
-        {STAT_CARDS.map((c) => (
-          <StatCard key={c.label} {...c} />
-        ))}
-      </div>
+      {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
 
-      <div className="mt-4 flex flex-wrap gap-4">
-        <Panel title="Velocity" subtitle="Commitment vs work completed per sprint">
-          <VelocityChart />
-        </Panel>
-        <Panel title="Burndown" subtitle="Ideal vs actual remaining work">
-          <BurnDownChart />
-        </Panel>
-        <Panel title="Task progress" subtitle="Share of sprint tasks done">
-          <TaskProgress />
-        </Panel>
-      </div>
+      {loading && !report ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <div className="mt-5 flex flex-wrap gap-3">
+            {statCards.map((c) => (
+              <StatCard key={c.label} {...c} />
+            ))}
+          </div>
 
-      <div className="mt-4 flex flex-wrap gap-4">
-        <Panel title="Task distribution" subtitle="Planned vs completed by category">
-          <TasksCharts />
-        </Panel>
-      </div>
+          <div className="mt-4 flex flex-wrap gap-4">
+            <Panel title="Velocity" subtitle="Commitment vs completed points per sprint">
+              <VelocityChart velocity={velocity} />
+            </Panel>
+            <Panel title="Burndown" subtitle="Ideal vs actual remaining points">
+              <BurnDownChart burndown={burndown} />
+            </Panel>
+            <Panel title="Completion" subtitle="Share of sprint items done">
+              <CompletionGauge value={summary?.completion_pct ?? 0} />
+            </Panel>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-4">
+            <Panel title="Work-item distribution" subtitle="Planned vs completed by type">
+              <DistributionChart distribution={distribution} />
+            </Panel>
+          </div>
+        </>
+      )}
     </div>
   );
 };
 
-const velocityProps = {
-  height: 280,
-  colors: BRAND_CHART_COLORS,
-  xAxis: [{ data: ['Sprint 1', 'Sprint 2', 'Sprint 3', 'Sprint 4', 'Sprint 5'], scaleType: 'band' }],
+const EmptyChart = ({ height = 280 }) => (
+  <Box sx={{ display: 'grid', placeItems: 'center', height }}>
+    <span className="text-sm text-slate-400">No data yet</span>
+  </Box>
+);
+
+const VelocityChart = ({ velocity }) => {
+  if (!velocity || !velocity.labels?.length) return <EmptyChart />;
+  return (
+    <BarChart
+      height={280}
+      colors={BRAND_CHART_COLORS}
+      xAxis={[{ data: velocity.labels, scaleType: 'band' }]}
+      series={[
+        { data: velocity.commitment, label: 'Commitment' },
+        { data: velocity.completed, label: 'Completed' },
+      ]}
+    />
+  );
 };
 
-const VelocityChart = () => (
-  <BarChart
-    {...velocityProps}
-    series={[
-      { data: [15, 20, 25, 27, 23], label: 'Commitment' },
-      { data: [15, 15, 20, 26, 20], label: 'Work completed' },
-    ]}
-  />
-);
+const BurnDownChart = ({ burndown }) => {
+  if (!burndown || !burndown.days?.length) return <EmptyChart />;
+  return (
+    <LineChart
+      height={280}
+      colors={['#94a3b8', '#4f46e5']}
+      xAxis={[{ scaleType: 'point', data: burndown.days }]}
+      series={[
+        { data: burndown.ideal, label: 'Ideal', showMark: false },
+        { data: burndown.actual, label: 'Actual', showMark: false, connectNulls: false },
+      ]}
+    />
+  );
+};
 
-const uData = [23, 90, 70, 50, 25, 0];
-const pData = [65, 90, 80, 55, 45, 30];
-const xLabels = ['1 Apr', '3 Apr', '5 Apr', '7 Apr', '9 Apr', '11 Apr'];
-
-const BurnDownChart = () => (
-  <LineChart
-    height={280}
-    colors={BRAND_CHART_COLORS}
-    series={[
-      { data: uData, label: 'Ideal', area: true, stack: 'total', showMark: false },
-      { data: pData, label: 'Actual', area: true, stack: 'total', showMark: false },
-    ]}
-    xAxis={[{ scaleType: 'point', data: xLabels }]}
-    sx={{ [`& .${lineElementClasses.root}`]: { display: 'none' } }}
-  />
-);
-
-const TaskProgress = () => (
+const CompletionGauge = ({ value }) => (
   <Box sx={{ display: 'grid', placeItems: 'center', minHeight: 240 }}>
     <Gauge
-      value={75}
+      value={Math.round(value)}
       startAngle={-110}
       endAngle={110}
       height={220}
@@ -113,89 +174,23 @@ const TaskProgress = () => (
         [`& .${gaugeClasses.valueText}`]: { fontSize: 36, fontWeight: 800 },
         [`& .${gaugeClasses.valueArc}`]: { fill: '#4f46e5' },
       }}
-      text={({ value }) => `${value}%`}
+      text={({ value: v }) => `${v}%`}
     />
   </Box>
 );
 
-const barChartsParams = {
-  series: [
-    { data: [68, 32, 8], label: 'Planned' },
-    { data: [55, 23, 10], label: 'Completed' },
-  ],
-  height: 360,
-  colors: BRAND_CHART_COLORS,
-  xAxis: [{ data: ['Feature', 'Bug', 'Chore'], scaleType: 'band' }],
-};
-
-const pieChartsParams = {
-  series: [
-    {
-      data: [
-        { value: 68.16, label: 'Feature' },
-        { value: 12.34, label: 'Bug' },
-        { value: 7.34, label: 'Chore' },
-        { value: 4.75, label: 'Spike' },
-        { value: 3.75, label: 'Docs' },
-        { value: 3.66, label: 'Other' },
-      ],
-      outerRadius: 120,
-      innerRadius: 64,
-      highlighted: { additionalRadius: 8 },
-    },
-  ],
-  height: 360,
-  colors: BRAND_CHART_COLORS,
-  margin: { top: 20, bottom: 20 },
-};
-
-const TasksCharts = () => {
-  const [chartType, setChartType] = React.useState('bar');
-  const highlighted = 'item';
-  const faded = 'global';
-
-  const handleChartType = (event, newChartType) => {
-    if (newChartType !== null) setChartType(newChartType);
-  };
-
+const DistributionChart = ({ distribution }) => {
+  if (!distribution || !distribution.labels?.length) return <EmptyChart height={360} />;
   return (
-    <Stack spacing={1.5}>
-      <ToggleButtonGroup
-        value={chartType}
-        exclusive
-        onChange={handleChartType}
-        aria-label="chart type"
-        size="small"
-        sx={{
-          alignSelf: 'flex-start',
-          '& .MuiToggleButton-root': {
-            textTransform: 'capitalize',
-            px: 2,
-            borderColor: 'rgba(79, 70, 229,0.3)',
-            color: '#4338ca',
-            '&.Mui-selected': { bgcolor: 'rgba(79, 70, 229,0.12)', color: '#4338ca' },
-          },
-        }}
-      >
-        {['bar', 'pie'].map((type) => (
-          <ToggleButton key={type} value={type}>
-            {type}
-          </ToggleButton>
-        ))}
-      </ToggleButtonGroup>
-      {chartType === 'bar' && (
-        <BarChart
-          {...barChartsParams}
-          series={barChartsParams.series.map((s) => ({ ...s, highlightScope: { highlighted, faded } }))}
-        />
-      )}
-      {chartType === 'pie' && (
-        <PieChart
-          {...pieChartsParams}
-          series={pieChartsParams.series.map((s) => ({ ...s, highlightScope: { highlighted, faded } }))}
-        />
-      )}
-    </Stack>
+    <BarChart
+      height={360}
+      colors={BRAND_CHART_COLORS}
+      xAxis={[{ data: distribution.labels, scaleType: 'band' }]}
+      series={[
+        { data: distribution.planned, label: 'Planned' },
+        { data: distribution.completed, label: 'Completed' },
+      ]}
+    />
   );
 };
 

@@ -1,7 +1,12 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import AssistantChatMessage, AssistantChatSession, AuthSessionEvent
+from .models import (
+    AssistantChatMessage,
+    AssistantChatSession,
+    AuthSessionEvent,
+    Notification,
+)
 
 User = get_user_model()
 
@@ -27,6 +32,26 @@ class AuthSessionEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuthSessionEvent
         fields = ["id", "event", "created_at"]
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    read = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Notification
+        fields = [
+            "id",
+            "kind",
+            "severity",
+            "title",
+            "body",
+            "link",
+            "read",
+            "created_at",
+        ]
+
+    def get_read(self, obj) -> bool:
+        return obj.read_at is not None
 
 
 class SessionUserSerializer(serializers.ModelSerializer):
@@ -59,3 +84,12 @@ class AssistantChatSessionDetailSerializer(serializers.ModelSerializer):
 
 class AssistantUserMessageInSerializer(serializers.Serializer):
     content = serializers.CharField(max_length=16000, trim_whitespace=True, allow_blank=False)
+    # Optional perspective from the assistant UI: who/what the user is asking about.
+    scope = serializers.ChoiceField(
+        choices=["auto", "me", "team", "project"],
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+    )
+    # Optional project the user has chosen to chat about (team/project perspective).
+    project_id = serializers.IntegerField(required=False, allow_null=True)

@@ -21,7 +21,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from backend import settings
 from .attendance_db import finalize_logout_attendance, record_login_attendance
 from .auth_events import record_auth_event
-from .models import AuthSessionEvent
+from .models import AgentStatus, AuthSessionEvent, Notification
 from .permissions import IsAdminRole
 from .tasks import persist_usage_events_batch, send_password_reset_otp_email
 from .usage_ingest import normalize_usage_events
@@ -35,6 +35,7 @@ from .insights import (
 from .password_utils import verify_and_upgrade_password
 from .serializers import (
     AuthSessionEventSerializer,
+    NotificationSerializer,
     SessionUserSerializer,
     UserRegistrationSerializer,
 )
@@ -315,15 +316,158 @@ class UsageEventBatchIngestView(APIView):
             return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
 
         serializable = []
+        last_event_at = None
         for e in events:
             row = dict(e)
-            row["occurred_at"] = row["occurred_at"].isoformat()
+            occurred = row["occurred_at"]
+            if last_event_at is None or occurred > last_event_at:
+                last_event_at = occurred
+            row["occurred_at"] = occurred.isoformat()
             serializable.append(row)
 
-        persist_usage_events_batch.delay(uid, serializable)
+        # Enqueue (or, with CELERY_TASK_ALWAYS_EAGER, persist in-process). If the broker is
+        # down or the persist raises, surface a retryable 503 instead of an unhandled 500 so
+        # the desktop agent keeps the batch buffered and retries — no silent data loss.
+        try:
+            persist_usage_events_batch.delay(uid, serializable)
+        except Exception:
+            logger.exception("usage ingest enqueue/persist failed user_id=%s", uid)
+            return Response(
+                {"detail": "usage ingest temporarily unavailable; retry later", "queued": False},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        # Heartbeat: record that this user's agent is alive and delivering data. Best-effort
+        # — a failure here must never fail an otherwise-accepted batch.
+        try:
+            self._touch_agent_status(uid, last_event_at, request)
+        except Exception:
+            logger.exception("agent status update failed user_id=%s (continuing)", uid)
+
         return Response(
             {"accepted": len(serializable), "queued": True},
             status=status.HTTP_202_ACCEPTED,
+        )
+
+    @staticmethod
+    def _touch_agent_status(uid, last_event_at, request):
+        now = timezone.now()
+        version = (request.META.get("HTTP_X_SMARTAGILE_AGENT_VERSION") or "")[:64]
+        defaults = {"last_seen_at": now}
+        if last_event_at is not None:
+            defaults["last_event_at"] = last_event_at
+        if version:
+            defaults["agent_version"] = version
+        AgentStatus.objects.update_or_create(user_id=uid, defaults=defaults)
+
+
+class NotificationListView(APIView):
+    """GET: current user's notifications + unread count.
+
+    Query params: ``?unread=1`` to return only unread, ``?limit=N`` (default 30, max 100).
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        qs = Notification.objects.filter(user_id=request.user.pk)
+        if str(request.query_params.get("unread", "")).strip() in ("1", "true", "yes"):
+            qs = qs.filter(read_at__isnull=True)
+        try:
+            limit = int(request.query_params.get("limit", 30))
+        except ValueError:
+            limit = 30
+        limit = max(1, min(limit, 100))
+
+        unread = Notification.objects.filter(
+            user_id=request.user.pk, read_at__isnull=True
+        ).count()
+        items = NotificationSerializer(qs[:limit], many=True).data
+        return Response({"unread": unread, "results": items})
+
+
+class NotificationReadView(APIView):
+    """POST: mark one notification (``/<id>/read/``) or all (``/read-all/``) as read."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk=None, *args, **kwargs):
+        now = timezone.now()
+        qs = Notification.objects.filter(user_id=request.user.pk, read_at__isnull=True)
+        if pk is not None:
+            qs = qs.filter(pk=pk)
+        updated = qs.update(read_at=now)
+        unread = Notification.objects.filter(
+            user_id=request.user.pk, read_at__isnull=True
+        ).count()
+        return Response({"updated": updated, "unread": unread})
+
+
+class HealthView(APIView):
+    """Unauthenticated readiness probe.
+
+    The desktop agent and ops tooling hit this to distinguish a real outage (DB down,
+    server starting) from a transient blip. Returns 200 only when the database is
+    reachable; 503 otherwise so callers back off and retry instead of treating a cold
+    start as a hard failure.
+    """
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        db_ok = True
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+        except Exception:
+            db_ok = False
+            logger.exception("health check: database unreachable")
+
+        payload = {
+            "ok": db_ok,
+            "database": "ok" if db_ok else "down",
+            "time": timezone.now().isoformat(),
+            "timezone": str(getattr(settings, "TIME_ZONE", "UTC")),
+        }
+        code = status.HTTP_200_OK if db_ok else status.HTTP_503_SERVICE_UNAVAILABLE
+        return Response(payload, status=code)
+
+
+class AgentStatusView(APIView):
+    """GET: is the current user's desktop agent alive and uploading?
+
+    ``connected`` is true when the last successful upload (heartbeat) is within the
+    freshness window, so the UI can show "tracking active" vs "reconnect / start the agent"
+    without the agent having to push a separate heartbeat.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    FRESH_SECONDS = 180
+
+    def get(self, request, *args, **kwargs):
+        st = AgentStatus.objects.filter(user_id=request.user.pk).first()
+        if st is None or st.last_seen_at is None:
+            return Response(
+                {
+                    "connected": False,
+                    "last_seen_at": None,
+                    "last_event_at": None,
+                    "agent_version": "",
+                    "seconds_since_seen": None,
+                }
+            )
+        age = (timezone.now() - st.last_seen_at).total_seconds()
+        return Response(
+            {
+                "connected": age <= self.FRESH_SECONDS,
+                "last_seen_at": st.last_seen_at.isoformat(),
+                "last_event_at": st.last_event_at.isoformat() if st.last_event_at else None,
+                "agent_version": st.agent_version or "",
+                "seconds_since_seen": int(age),
+            }
         )
 
 

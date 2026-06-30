@@ -13,6 +13,8 @@ def run_assistant_graph(
     user_text: str,
     *,
     session_id: int | None = None,
+    scope: str | None = None,
+    project_id: int | None = None,
 ) -> tuple[str, dict[str, Any]]:
     from .graph import build_compiled_assistant_graph
     from ..brain import build_productivity_snapshot
@@ -23,6 +25,8 @@ def run_assistant_graph(
             {
                 "user_text": (user_text or "").strip(),
                 "session_id": session_id,
+                "scope": scope,
+                "project_id": project_id,
             }
         )
         text = (out or {}).get("assistant_text") or ""

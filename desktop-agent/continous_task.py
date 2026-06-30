@@ -52,6 +52,23 @@ def stop_continous_task():
     print("Task stopped", flush=True)
 
 
+def ensure_engine_alive() -> None:
+    """Watchdog: if the tracking thread has died, start a fresh engine.
+
+    The engine loop is now resilient per-iteration, but this is defence-in-depth so a
+    single fatal error can never leave the agent 'running' yet silently not tracking.
+    """
+    global thread, _engine
+    if not running_flag:
+        return
+    if thread is not None and thread.is_alive():
+        return
+    logger.warning("engine thread not alive; restarting tracking engine")
+    _engine = TrackingEngine(User_global_id)
+    thread = threading.Thread(target=_engine.run, name="smartagile-engine", daemon=False)
+    thread.start()
+
+
 if __name__ == "__main__":
     import os
     import sys
@@ -105,6 +122,7 @@ if __name__ == "__main__":
         print("No auth yet: use Connect in Settings, or set SMARTAGILE_ACCESS_TOKEN for dev.")
     try:
         while running_flag:
-            time.sleep(1)
+            time.sleep(2)
+            ensure_engine_alive()  # restart tracking if the engine thread ever dies
     except KeyboardInterrupt:
         stop_continous_task()

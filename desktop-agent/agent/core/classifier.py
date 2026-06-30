@@ -22,6 +22,8 @@ import joblib
 import pandas as pd
 from sklearn.exceptions import DataConversionWarning
 
+from . import win32
+
 try:
     from sklearn.exceptions import InconsistentVersionWarning
 except ImportError:  # older scikit-learn
@@ -70,6 +72,46 @@ _BROWSER_TITLE_SUFFIX_RE = re.compile(
     flags=re.IGNORECASE,
 )
 
+# Curated display names (by exe basename) for apps whose FileDescription is missing/ugly --
+# mostly packaged/UWP apps that report no version resource (e.g. WhatsApp.Root.exe).
+_NAME_OVERRIDES = {
+    "whatsapp.exe": "WhatsApp",
+    "whatsapp.root.exe": "WhatsApp",
+    "ms-teams.exe": "Microsoft Teams",
+    "teams.exe": "Microsoft Teams",
+    "olk.exe": "Outlook",
+    "explorer.exe": "Windows Explorer",
+    "cmd.exe": "Command Prompt",
+    "windowsterminal.exe": "Windows Terminal",
+}
+
+# Deterministic category by exe basename -- a strong signal that overrides the noisy
+# title/exe ML guess (which tends to default unknown apps to "work"). Labels match the
+# backend's canonical categories ("work" / "communication" / "entertainment").
+_APP_CATEGORY = {
+    "cursor.exe": "work",
+    "code.exe": "work",
+    "devenv.exe": "work",
+    "pycharm64.exe": "work",
+    "idea64.exe": "work",
+    "pgadmin4.exe": "work",
+    "windowsterminal.exe": "work",
+    "cmd.exe": "work",
+    "powershell.exe": "work",
+    "explorer.exe": "work",
+    "whatsapp.exe": "communication",
+    "whatsapp.root.exe": "communication",
+    "ms-teams.exe": "communication",
+    "teams.exe": "communication",
+    "slack.exe": "communication",
+    "olk.exe": "communication",
+    "outlook.exe": "communication",
+    "discord.exe": "communication",
+    "spotify.exe": "entertainment",
+    "vlc.exe": "entertainment",
+    "steam.exe": "entertainment",
+}
+
 
 class Classifier:
     def __init__(self) -> None:
@@ -79,6 +121,8 @@ class Classifier:
         self.app_model = joblib.load(d / "app_vectorizer.pkl")
         with open(d / "exe_to_software.json", "r", encoding="utf-8") as f:
             self.exe_to_software: dict[str, str] = json.load(f)
+        # Cache version-info lookups per executable path (constant for a process).
+        self._fd_cache: dict[str, str] = {}
 
     # -- browser detection / naming -------------------------------------
     def is_browser(self, app_name: str | None) -> bool:
@@ -131,7 +175,7 @@ class Classifier:
         key = self.resolve_browser_key(app_name)
         name = self.exe_to_software.get(key.lower(), "Unknown Software")
         if name == "Unknown Software":
-            name = self.stable_app_name(app_name, title_raw)
+            name = self._file_description(app_name) or self.stable_app_name(app_name, title_raw)
         return (name or "").strip() or "Unknown"
 
     # -- application naming ---------------------------------------------
@@ -150,11 +194,30 @@ class Classifier:
         base = os.path.basename(app_path_or_name.replace("/", "\\")).lower()
         return base if base else app_path_or_name.lower()
 
+    def _file_description(self, app_path: str) -> str:
+        """Cached version-info FileDescription (Digital-Wellbeing-style display name)."""
+        if not app_path:
+            return ""
+        if app_path not in self._fd_cache:
+            self._fd_cache[app_path] = win32.file_description(app_path) or ""
+        return self._fd_cache[app_path]
+
     def app_software_name(self, app_name: str, title_raw: str = "") -> str:
-        name = self.exe_to_software.get(self._exe_lookup_key(app_name), "Unknown Software")
-        if name == "Unknown Software":
-            name = self.stable_app_name(app_name, title_raw)
-        return (name or "").strip() or "Unknown"
+        """
+        Resolve a friendly app name, best -> fallback:
+        1) curated override map, 2) exe_to_software.json, 3) exe FileDescription
+        (Task Manager / Digital Wellbeing name), 4) exe stem.
+        """
+        key = self._exe_lookup_key(app_name)
+        if key in _NAME_OVERRIDES:
+            return _NAME_OVERRIDES[key]
+        name = self.exe_to_software.get(key, "Unknown Software")
+        if name and name != "Unknown Software":
+            return name.strip() or "Unknown"
+        fd = self._file_description(app_name)
+        if fd:
+            return fd
+        return self.stable_app_name(app_name, title_raw) or "Unknown"
 
     def stable_app_name(self, app_name: str | None, task_raw: str | None) -> str:
         """
@@ -172,6 +235,11 @@ class Classifier:
         return str(self.svm_model.predict([title_raw])[0])
 
     def predict_app_category(self, app_name: str) -> str:
+        # A known executable is a stronger signal than the ML model (which defaults many
+        # unknown/system exes to "work"); use the override when we have one.
+        override = _APP_CATEGORY.get(self._exe_lookup_key(app_name))
+        if override:
+            return override
         ml_app = self.app_id_for_ml(app_name)
         vec = self.app_model.transform([ml_app])
         frame = pd.DataFrame(vec.toarray(), columns=self.app_model.get_feature_names_out())

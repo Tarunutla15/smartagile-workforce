@@ -16,5 +16,6 @@ module.exports = function setupProxy(app) {
 
   app.use("/api", apiProxy);
   app.use("/taskapi", apiProxy);
+  app.use("/sprintapi", apiProxy);
   app.use("/media", apiProxy);
 };

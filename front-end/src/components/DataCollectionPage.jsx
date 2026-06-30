@@ -8,14 +8,15 @@ import DataCollectionMui from "./DataCollectionMui";
  */
 const DataCollectionPage = () => {
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f8fafc" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default", color: "text.primary" }}>
       <CssBaseline />
       <Box
         component="header"
         sx={{
           borderBottom: 1,
           borderColor: "divider",
-          bgcolor: "rgba(255,255,255,0.9)",
+          bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(15,23,42,0.9)" : "rgba(255,255,255,0.9)"),
+          backdropFilter: "blur(6px)",
           position: "sticky",
           top: 0,
           zIndex: 10,
@@ -33,12 +34,20 @@ const DataCollectionPage = () => {
             gap: 2,
           }}
         >
-          <Link to="/" style={{ fontSize: 14, fontWeight: 600, color: "#4338ca", textDecoration: "none" }}>
+          <Box
+            component={Link}
+            to="/"
+            sx={{ fontSize: 14, fontWeight: 600, color: "primary.main", textDecoration: "none" }}
+          >
             ← Home
-          </Link>
-          <Link to="/login" style={{ fontSize: 14, fontWeight: 600, color: "#334155", textDecoration: "none" }}>
+          </Box>
+          <Box
+            component={Link}
+            to="/login"
+            sx={{ fontSize: 14, fontWeight: 600, color: "text.secondary", textDecoration: "none" }}
+          >
             Login
-          </Link>
+          </Box>
         </Box>
       </Box>
       <Box component="main" sx={{ maxWidth: 720, mx: "auto", px: 2, py: 4 }}>
@@ -60,7 +69,7 @@ function TypographyPublicTitle() {
           fontFamily: '"Source Serif 4", Georgia, serif',
           fontSize: { xs: "1.75rem", sm: "2rem" },
           fontWeight: 700,
-          color: "#0f172a",
+          color: "text.primary",
           letterSpacing: "-0.02em",
           m: 0,
         }}

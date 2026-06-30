@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any
 
 from django.conf import settings
@@ -37,7 +38,7 @@ from .tools import (
 )
 
 logger = logging.getLogger(__name__)
-GRAPH_VERSION = 1
+GRAPH_VERSION = 2
 
 
 def _format_recent_messages(msgs: list[dict[str, Any]]) -> str:
@@ -81,11 +82,29 @@ def _wrap(
     }
 
 
+_WORK_ITEM_WORDS = re.compile(
+    r"\b(task|tasks|item|items|story|stories|bug|bugs|ticket|tickets|backlog|board|"
+    r"assigned|pending|sprint|sprints)\b",
+    re.IGNORECASE,
+)
+
+
+def _mentions_work_items(text: str) -> bool:
+    return bool(_WORK_ITEM_WORDS.search(text or ""))
+
+
 def classify_node(user: Any, state: AgentState) -> dict[str, Any]:  # noqa: ARG001
-    from .intent import wants_email_report, wants_recurring_digest, wants_task_insights
+    from .intent import (
+        wants_email_report,
+        wants_knowledge,
+        wants_recurring_digest,
+        wants_task_insights,
+    )
+    from .sprint_agent import wants_sprint
 
     user_text = (state or {}).get("user_text") or ""
     recent = (state or {}).get("recent_messages") or []
+    scope = (state or {}).get("scope") or "auto"
     route = route_message(user_text, recent_messages=recent)
     intent = (route or {}).get("intent") or "general"
     # Deterministic overrides (checked most-specific first):
@@ -96,6 +115,26 @@ def classify_node(user: Any, state: AgentState) -> dict[str, Any]:  # noqa: ARG0
     elif wants_email_report(user_text):
         intent = "report"
         route = {**(route or {}), "intent": "report"}
+    elif wants_knowledge(user_text):
+        # Doc-RAG: questions grounded in real work-item/comment/sprint-goal text. Checked
+        # before sprint/task_insights, which share keywords like "sprint"/"task".
+        intent = "knowledge"
+        route = {**(route or {}), "intent": "knowledge"}
+    elif wants_sprint(user_text):
+        # Sprint-specific requests use the dedicated sprint skill, overriding the
+        # generic task agent (the router may classify these as "tasks").
+        intent = "sprint"
+        route = {**(route or {}), "intent": "sprint"}
+    elif (
+        scope in ("team", "project")
+        and intent in ("tasks", "general")
+        and (route or {}).get("tool", "none") == "none"
+        and _mentions_work_items(user_text)
+    ):
+        # In a team/project perspective, task questions are sprint/project-scoped
+        # (a manager view) — handle them with the sprint skill, not the personal agent.
+        intent = "sprint"
+        route = {**(route or {}), "intent": "sprint"}
     elif wants_task_insights(user_text) and (route or {}).get("tool", "none") == "none":
         # Read-only task analytics: only when the router did NOT plan a task ACTION
         # (create/delete/update/rename), so genuine actions still flow to the tasks agent.
@@ -871,6 +910,90 @@ def synthesize_task_insights_node(user: Any, state: AgentState) -> dict[str, Any
     return {"assistant_text": text, "result_json": rj}
 
 
+def load_knowledge_node(user: Any, state: AgentState) -> dict[str, Any]:
+    """Doc-RAG retrieval: top chunks from the user's visible projects for this query."""
+    from ..knowledge import retrieve_knowledge
+
+    query = (state or {}).get("user_text") or ""
+    chunks = retrieve_knowledge(user, query, limit=6)
+    return {"knowledge_ctx": {"query": query, "chunks": chunks}}
+
+
+def _format_knowledge_chunks(chunks: list[dict[str, Any]]) -> str:
+    lines = []
+    for i, c in enumerate(chunks, 1):
+        src = {
+            "work_item": "work item",
+            "comment": "comment",
+            "sprint_goal": "sprint goal",
+        }.get(c.get("source_type"), c.get("source_type") or "item")
+        lines.append(f"[{i}] ({src}) {c.get('title') or 'Untitled'}: {c.get('snippet') or ''}")
+    return "\n".join(lines)[:12000]
+
+
+def synthesize_knowledge_node(user: Any, state: AgentState) -> dict[str, Any]:  # noqa: ARG001
+    """Answer grounded ONLY in retrieved chunks (no hallucinated facts)."""
+    ctx = (state or {}).get("knowledge_ctx") or {}
+    chunks = ctx.get("chunks") or []
+    user_text = (state or {}).get("user_text") or ""
+    recent = (state or {}).get("recent_messages") or []
+    use_llm = bool(getattr(settings, "ASSISTANT_LLM_SYNTHESIZE", True))
+    llm: Any = None
+
+    base: dict[str, Any] = {"kind": "knowledge", "chunks": chunks, "query": ctx.get("query")}
+
+    if not chunks:
+        text = (
+            "I couldn’t find anything about that in your projects’ work items, comments, "
+            "or sprint goals. Try naming the item or wording it the way it appears on the board."
+        )
+        return {
+            "assistant_text": text,
+            "result_json": _wrap(base, intent="knowledge", llm_used=None),
+        }
+
+    if use_llm and is_llm_configured():
+        try:
+            system = (
+                "You are SmartAgile's project-knowledge assistant. Answer the user's question "
+                "using ONLY the CONTEXT chunks provided (real work-item text, comments, and "
+                "sprint goals). Do NOT invent facts, names, dates, or numbers that are not in the "
+                "context. If the context does not contain the answer, say you couldn't find it in "
+                "their project content. Cite the item titles you used (e.g. *(from “Login bug”)*). "
+                "Be concise; use bullets when summarizing multiple items."
+            )
+            human = (
+                f"Question:\n{user_text}\n\n"
+                f"Recent chat context:\n{_format_recent_messages(recent)}\n\n"
+                f"CONTEXT chunks (numbered):\n{_format_knowledge_chunks(chunks)}"
+            )
+            text, llm = invoke_system_human_resilient(system, human)
+        except Exception:  # pragma: no cover
+            logger.exception("synthesize knowledge LLM failed; using template")
+            text = _format_knowledge_template(chunks)
+            llm = None
+    else:
+        text = _format_knowledge_template(chunks)
+
+    return {
+        "assistant_text": text,
+        "result_json": _wrap(base, intent="knowledge", llm_used=llm),
+    }
+
+
+def _format_knowledge_template(chunks: list[dict[str, Any]]) -> str:
+    label = {
+        "work_item": "work item",
+        "comment": "comment",
+        "sprint_goal": "sprint goal",
+    }
+    lines = ["Here’s what I found in your project content:", ""]
+    for c in chunks[:5]:
+        src = label.get(c.get("source_type"), "item")
+        lines.append(f"- **{c.get('title') or 'Untitled'}** ({src}): {c.get('snippet') or ''}")
+    return "\n".join(lines)
+
+
 def digest_node(user: Any, state: AgentState) -> dict[str, Any]:
     """
     Scheduling agent: enable/disable/inspect the user's recurring usage-report digest,
@@ -947,6 +1070,26 @@ def digest_node(user: Any, state: AgentState) -> dict[str, Any]:
             intent="digest",
             llm_used=None,
         ),
+    }
+
+
+def sprint_node(user: Any, state: AgentState) -> dict[str, Any]:
+    """
+    Sprint agent: create/start/complete sprints, add/move work items, change status,
+    and answer status/burndown/list queries. Delegates to the isolated sprint skill so
+    existing task/productivity flows are untouched. Permission-checked inside the skill.
+    """
+    from .sprint_agent import handle_sprint
+
+    user_text = (state or {}).get("user_text") or ""
+    recent = (state or {}).get("recent_messages") or []
+    recent_text = _format_recent_messages(recent)
+    scope = (state or {}).get("scope")
+    project_id = (state or {}).get("project_id")
+    text, base = handle_sprint(user, user_text, recent_text, scope=scope, project_id=project_id)
+    return {
+        "assistant_text": text,
+        "result_json": _wrap(base, intent="sprint", llm_used=None),
     }
 
 

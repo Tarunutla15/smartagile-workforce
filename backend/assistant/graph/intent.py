@@ -12,7 +12,9 @@ from .llm_factory import invoke_messages_resilient, is_llm_configured
 
 logger = logging.getLogger(__name__)
 
-INTENTS = frozenset({"productivity", "tasks", "task_insights", "general", "report", "digest"})
+INTENTS = frozenset(
+    {"productivity", "tasks", "task_insights", "general", "report", "digest", "sprint", "knowledge"}
+)
 
 # "email/send/share me ... report/summary/usage" -> user wants the report emailed.
 _REPORT_SEND_RE = re.compile(r"\b(e-?mail|mail|send|share|forward)\b", re.IGNORECASE)
@@ -49,6 +51,50 @@ _TASK_INSIGHTS_RE = re.compile(
 )
 
 
+# Document-RAG (knowledge) — questions answered from real work-item / comment / sprint-goal
+# text rather than aggregate metrics.
+#
+# "Strong" verbs are discussion-specific (blockers, comments, decisions, …): these clearly
+# want the actual written content, so any agile object (or a quoted title) is enough.
+# "Broad" verbs (summarize/explain/why) are ambiguous with metric/list questions
+# ("summarize my tasks", "explain the sprint"), so we only treat them as knowledge when the
+# object is a SPECIFIC item (bug/ticket/story/…) or the user quoted a title.
+_KNOWLEDGE_STRONG_VERB_RE = re.compile(
+    r"\b(what\s+(?:was|were)\s+discussed|discussion[s]?|blocker[s]?|blocked|decided|"
+    r"decision[s]?|comment[s]?|note[s]?|recap\s+of|context\s+(?:about|on|behind|of)|"
+    r"what\s+do\s+we\s+know|background\s+(?:on|of))\b",
+    re.IGNORECASE,
+)
+_KNOWLEDGE_BROAD_VERB_RE = re.compile(
+    r"\b(summari[sz]e|summary\s+of|why\s+(?:is|was|did|are)|explain)\b",
+    re.IGNORECASE,
+)
+# Any agile object (used with strong verbs).
+_KNOWLEDGE_OBJ_RE = re.compile(
+    r"\b(task[s]?|item[s]?|stor(?:y|ies)|bug[s]?|ticket[s]?|issue[s]?|work\s*item[s]?|"
+    r"epic[s]?|feature[s]?|sprint[s]?|project[s]?)\b",
+    re.IGNORECASE,
+)
+# Specific work item (used with broad verbs) — excludes generic task/item/sprint/project.
+_KNOWLEDGE_SPECIFIC_OBJ_RE = re.compile(
+    r"\b(stor(?:y|ies)|bug[s]?|ticket[s]?|issue[s]?|work\s*item[s]?|epic[s]?|feature[s]?)\b",
+    re.IGNORECASE,
+)
+
+
+def wants_knowledge(user_text: str) -> bool:
+    """True for questions grounded in actual work-item / comment / sprint-goal text."""
+    t = user_text or ""
+    has_quote = '"' in t or "'" in t
+    if _KNOWLEDGE_STRONG_VERB_RE.search(t) and (_KNOWLEDGE_OBJ_RE.search(t) or has_quote):
+        return True
+    if _KNOWLEDGE_BROAD_VERB_RE.search(t) and (
+        _KNOWLEDGE_SPECIFIC_OBJ_RE.search(t) or has_quote
+    ):
+        return True
+    return False
+
+
 def wants_email_report(user_text: str) -> bool:
     """True when the message asks to email/send a usage report (robust to wording)."""
     t = user_text or ""
@@ -77,19 +123,28 @@ def wants_task_insights(user_text: str) -> bool:
 
 
 def classify_intent_rules(user_text: str) -> str:
+    from .sprint_agent import wants_sprint
+
     t = (user_text or "").lower()
     if wants_recurring_digest(user_text):
         return "digest"
     if wants_email_report(user_text):
         return "report"
+    # Doc-RAG questions ("summarize the auth bug", "what blockers were raised in the sprint")
+    # are checked before task_insights/sprint, which would otherwise capture these keywords.
+    if wants_knowledge(user_text):
+        return "knowledge"
     if wants_task_insights(user_text):
         return "task_insights"
+    # Sprint-specific requests use the dedicated sprint skill (checked before the
+    # generic task keywords, which also include the word "sprint").
+    if wants_sprint(user_text):
+        return "sprint"
     if any(
         k in t
         for k in (
             "task",
             "tasks",
-            "sprint",
             "project",
             "todo",
             "jira",

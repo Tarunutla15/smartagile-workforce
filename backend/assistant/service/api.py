@@ -83,6 +83,14 @@ class AssistantSessionMessageView(APIView):
         ser_in = AssistantUserMessageInSerializer(data=request.data)
         ser_in.is_valid(raise_exception=True)
         content = (ser_in.validated_data.get("content") or "").strip()
+        requested_scope = ser_in.validated_data.get("scope") or "me"
+        project_id = ser_in.validated_data.get("project_id")
+        # Clamp the perspective to what this user's role permits (employees -> "me").
+        from sprints.services import effective_assistant_scope
+
+        scope = effective_assistant_scope(request.user, requested_scope)
+        if scope == "me":
+            project_id = None
         if not content:
             return Response(
                 {"error": "content is required"},
@@ -109,6 +117,8 @@ class AssistantSessionMessageView(APIView):
                 request.user,
                 content,
                 session_id=s.pk,
+                scope=scope,
+                project_id=project_id,
             )
             asst_msg = AssistantChatMessage.objects.create(
                 session=s,

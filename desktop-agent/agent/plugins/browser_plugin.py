@@ -1,14 +1,15 @@
 """
-Browser plugin: turns a browser window title (and, optionally, the real URL) into a
-site + page.
+Browser plugin: keeps the browser as one app (Digital-Wellbeing style) and puts the site
++ page in the activity/context, so all tabs roll up under "Google Chrome" / "Microsoft
+Edge" instead of fragmenting into many per-site cards.
 
-    "React Tutorial - YouTube"          -> app="YouTube",       activity="React Tutorial"
-    "asyncio in python - Stack Overflow" -> app="Stack Overflow", activity="asyncio in python"
-    "Sprint Planning - Google Docs"      -> app="Google Docs",    activity="Sprint Planning"
+    "React Tutorial - YouTube"           -> app="Google Chrome",  activity="YouTube - React Tutorial"
+    "asyncio in python - Stack Overflow" -> app="Google Chrome",  activity="Stack Overflow - asyncio in python"
 
-URL capture (``SMARTAGILE_BROWSER_URL=1``) is additive: when a URL is read it improves the
-site label (via its domain) and is attached to ``detail`` (``url`` / ``domain``) for the
-event payload. Without it, the plugin still works from the title alone.
+URL capture (``SMARTAGILE_BROWSER_URL``) is additive: when a URL is read, its domain sets
+a deterministic category and labels the site in the context, and ``url`` / ``domain`` are
+attached to ``detail`` for the event payload. Without it, the plugin still works from the
+title alone.
 """
 
 from __future__ import annotations
@@ -43,6 +44,35 @@ _DOMAIN_SITES = {
     "medium.com": "Medium",
     "netflix.com": "Netflix",
     "spotify.com": "Spotify",
+}
+
+# Registrable domain -> deterministic category. When a real URL is captured this overrides
+# the noisy title-based ML guess (e.g. a "SmartAgile" tab no longer reads as entertainment).
+# Labels match the backend's canonical categories ("work" / "entertainment").
+_DOMAIN_CATEGORY = {
+    "github.com": "work",
+    "gitlab.com": "work",
+    "stackoverflow.com": "work",
+    "stackexchange.com": "work",
+    "docs.google.com": "work",
+    "sheets.google.com": "work",
+    "slides.google.com": "work",
+    "drive.google.com": "work",
+    "mail.google.com": "work",
+    "atlassian.net": "work",
+    "notion.so": "work",
+    "figma.com": "work",
+    "chatgpt.com": "work",
+    "openai.com": "work",
+    "youtube.com": "entertainment",
+    "netflix.com": "entertainment",
+    "spotify.com": "entertainment",
+    "reddit.com": "entertainment",
+    "twitter.com": "entertainment",
+    "x.com": "entertainment",
+    "instagram.com": "entertainment",
+    "facebook.com": "entertainment",
+    "twitch.tv": "entertainment",
 }
 
 # Site names that commonly appear as the trailing " - <Site>" segment in titles.
@@ -96,6 +126,10 @@ class BrowserPlugin(Plugin):
         url = browser_url.get_active_url()
         domain = browser_url.registrable_domain(url) if url else None
 
+        # A known domain is a far stronger signal than the title; let it set the category.
+        if domain and domain in _DOMAIN_CATEGORY:
+            category = _DOMAIN_CATEGORY[domain]
+
         # Prefer a site label derived from the real domain; otherwise parse the title.
         site = _DOMAIN_SITES.get(domain) if domain else None
         page = _LEADING_COUNTER_RE.sub("", title_raw).strip() or title_raw
@@ -107,10 +141,13 @@ class BrowserPlugin(Plugin):
         if not site and domain:
             site = _DOMAIN_SITES.get(domain) or _prettify_domain(domain)
 
-        # Fall back to the browser's own name (e.g. "Google Chrome") when no site is known,
-        # preserving the original "top apps" semantics for unrecognised pages.
-        app = site or self.classifier.browser_software_name(raw.exe_path, title_raw)
-        activity = page or title_raw
+        # Group everything under the browser (one card per browser); the site + page live
+        # in the activity/context so tabs are visible inside that card.
+        app = self.classifier.browser_software_name(raw.exe_path, title_raw)
+        if site and page and site.lower() not in page.lower():
+            activity = f"{site} - {page}"
+        else:
+            activity = site or page or title_raw
 
         detail = None
         if url:

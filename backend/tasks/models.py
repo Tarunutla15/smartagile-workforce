@@ -59,6 +59,30 @@ class Task(models.Model):
         ('done', 'Done'),
     ]
 
+    # Agile work-item metadata (used by the `sprints` app; all optional so existing
+    # task flows keep working unchanged). Maps each board status to a metric category.
+    STATUS_CATEGORY = {
+        'todo': 'todo',
+        'inProgress': 'in_progress',
+        'done': 'done',
+    }
+
+    ITEM_TYPE_CHOICES = [
+        ('story', 'Story'),
+        ('task', 'Task'),
+        ('bug', 'Bug'),
+        ('chore', 'Chore'),
+        ('spike', 'Spike'),
+    ]
+
+    PRIORITY_CHOICES = [
+        ('none', 'None'),
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    ]
+
     title = models.CharField(max_length=100)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='todo')
     user = models.ForeignKey(
@@ -83,8 +107,32 @@ class Task(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
+    # --- Agile fields (Zoho Sprints-style) ---
+    sprint = models.ForeignKey(
+        "sprints.Sprint",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="items",
+    )
+    item_type = models.CharField(max_length=12, choices=ITEM_TYPE_CHOICES, default="task")
+    priority = models.CharField(max_length=8, choices=PRIORITY_CHOICES, default="medium")
+    story_points = models.FloatField(null=True, blank=True)
+    description = models.TextField(blank=True, default="")
+    rank = models.FloatField(default=0, help_text="Manual ordering within backlog / board column.")
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         ordering = ['-created_at', '-id']
 
     def __str__(self):
         return self.title
+
+    @property
+    def status_category(self):
+        return self.STATUS_CATEGORY.get(self.status, "todo")
+
+    @property
+    def is_done(self):
+        return self.status == "done"

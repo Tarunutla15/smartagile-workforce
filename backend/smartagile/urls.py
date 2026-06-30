@@ -26,5 +26,18 @@ urlpatterns = [
         UsageEventBatchIngestView.as_view(),
         name='usage_events_batch',
     ),
+    path("health/", HealthView.as_view(), name="health"),
+    path("agent/status/", AgentStatusView.as_view(), name="agent_status"),
+    path("notifications/", NotificationListView.as_view(), name="notifications"),
+    path(
+        "notifications/read-all/",
+        NotificationReadView.as_view(),
+        name="notifications_read_all",
+    ),
+    path(
+        "notifications/<int:pk>/read/",
+        NotificationReadView.as_view(),
+        name="notification_read",
+    ),
     path("assistant/", include("assistant.service.urls")),
 ]

@@ -1,10 +1,9 @@
 import React from 'react';
-import AppBar from '@mui/material/AppBar';
-import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import NotificationsIcon from '@mui/icons-material/Notifications';
+import NotificationsBell from '../../components/NotificationsBell';
 import Avatar from '@mui/material/Avatar';
+import Tooltip from '@mui/material/Tooltip';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/system';
 import PropTypes from 'prop-types';
@@ -13,13 +12,12 @@ import Tab from '@mui/material/Tab';
 import GHome from './GHome';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import LogoutIcon from '@mui/icons-material/Logout';
-import MenuIcon from '@mui/icons-material/Menu';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { api, mediaUrl } from '../../api/client';
 import { useSession } from '../../context/SessionContext';
-import { APPBAR_GRADIENT, APPBAR_SHADOW } from '../../utils/chartTheme';
 import { DarkModeIconButton } from '../../theme/DarkModeToggle';
+import DashboardAppBar, { headerIconSx, HEADER_HEIGHT } from '../../components/DashboardAppBar';
 
 const GroupDashboard = () => {
   const navigate = useNavigate();
@@ -33,7 +31,7 @@ const GroupDashboard = () => {
 
   const menuItems = [
     { text: 'Organization (admin)', path: '/admin/dashboard', adminOnly: true },
-    { text: 'Sprint dashboard', path: '/admin/sprint-dashboard', adminOnly: true },
+    { text: 'Sprints', path: '/sprint-dashboard', adminOnly: false },
     { text: 'Employee profiles', path: '/admin/employee-profiles', adminOnly: true },
     { text: 'Group dashboard', path: '/group/dashboard', adminOnly: false },
     { text: 'Employee dashboard', path: '/employee/dashboard', adminOnly: false },
@@ -54,20 +52,16 @@ const GroupDashboard = () => {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <CssBaseline />
-      <AppBar
-        position="fixed"
-        elevation={0}
-        sx={{
-          zIndex: (theme) => theme.zIndex.drawer + 1,
-          background: APPBAR_GRADIENT,
-          boxShadow: APPBAR_SHADOW,
-        }}
-      >
-        <Toolbar sx={{ minHeight: 56, height: 56, gap: 1 }}>
-          <IconButton edge="start" color="inherit" aria-label="Open navigation menu" onClick={handleMenuOpen}>
-            <MenuIcon />
-          </IconButton>
-          <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+      <DashboardAppBar
+        subtitle="Group workspace"
+        onMenuOpen={handleMenuOpen}
+        navMenu={
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+            slotProps={{ paper: { sx: { mt: 1, borderRadius: 2, minWidth: 220 } } }}
+          >
             {menuItems.map(
               (item) =>
                 item.path !== currentPath && (
@@ -77,23 +71,39 @@ const GroupDashboard = () => {
                 )
             )}
           </Menu>
-          <Typography variant="h6" noWrap sx={{ flexGrow: 1, fontWeight: 700, letterSpacing: '-0.02em' }}>
-            SmartAgile <Box component="span" sx={{ fontWeight: 500, opacity: 0.85 }}>· Group</Box>
-          </Typography>
-          <DarkModeIconButton />
-          <IconButton color="inherit" size="small">
-            <NotificationsIcon />
-          </IconButton>
-          <Avatar
-            alt=""
-            src={user?.profile_photo ? mediaUrl(user.profile_photo) : ''}
-            sx={{ width: 32, height: 32 }}
-          />
-          <IconButton color="inherit" onClick={handleLogout} size="small" aria-label="Log out">
-            <LogoutIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
+        }
+        actions={
+          <>
+            <DarkModeIconButton sx={headerIconSx} />
+            <NotificationsBell sx={headerIconSx} />
+            <Tooltip title="Log out">
+              <IconButton sx={headerIconSx} onClick={handleLogout} size="small" aria-label="Log out">
+                <LogoutIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </>
+        }
+        account={
+          <Tooltip title={user?.username || user?.email || 'Account'}>
+            <Avatar
+              alt={user?.username || ''}
+              src={user?.profile_photo ? mediaUrl(user.profile_photo) : ''}
+              sx={{
+                width: 36,
+                height: 36,
+                ml: 0.5,
+                fontSize: 15,
+                fontWeight: 700,
+                bgcolor: 'rgba(255,255,255,0.20)',
+                color: '#fff',
+                boxShadow: '0 0 0 2px rgba(255,255,255,0.55)',
+              }}
+            >
+              {(user?.username?.[0] || user?.email?.[0] || '?').toUpperCase()}
+            </Avatar>
+          </Tooltip>
+        }
+      />
       <VerticalTabs/>
     </Box>
   );
@@ -141,7 +151,7 @@ function VerticalTabs() {
   };
 
   return (
-    <Box sx={{ flexGrow: 1, display: 'flex', minHeight: '100vh', pt: '56px' }}>
+    <Box sx={{ flexGrow: 1, display: 'flex', minHeight: '100vh', pt: `${HEADER_HEIGHT}px` }}>
       <Tabs
         orientation="vertical"
         value={value}
@@ -152,17 +162,22 @@ function VerticalTabs() {
           bgcolor: 'background.paper',
           borderRight: 1,
           borderColor: 'divider',
-          boxShadow: '4px 0 24px rgba(15, 23, 42, 0.05)',
+          boxShadow: (t) =>
+            t.palette.mode === 'dark' ? '4px 0 24px rgba(0, 0, 0, 0.4)' : '4px 0 24px rgba(15, 23, 42, 0.05)',
           pt: 1,
           '& .MuiTab-root': {
             textTransform: 'none',
             alignItems: 'flex-start',
             fontWeight: 600,
-            color: '#64748b',
+            color: 'text.secondary',
             minHeight: 48,
-            '&.Mui-selected': { color: '#4338ca', bgcolor: 'rgba(79, 70, 229,0.08)' },
+            '&.Mui-selected': {
+              color: 'primary.main',
+              bgcolor: (t) =>
+                t.palette.mode === 'dark' ? 'rgba(129, 140, 248, 0.16)' : 'rgba(79, 70, 229, 0.08)',
+            },
           },
-          '& .MuiTabs-indicator': { left: 0, width: 3, borderRadius: '0 4px 4px 0', bgcolor: '#4f46e5' },
+          '& .MuiTabs-indicator': { left: 0, width: 3, borderRadius: '0 4px 4px 0', bgcolor: 'primary.main' },
         }}
       >
         <Tab label="Dashboard" {...a11yProps(0)} />

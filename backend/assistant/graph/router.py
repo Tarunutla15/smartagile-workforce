@@ -23,6 +23,7 @@ Your job: decide what the backend should execute for the user's message.
 - report: the user wants to EMAIL / SEND / SHARE a usage report or summary ONE time (not recurring), optionally to a specific address
 - productivity: questions about focus, usage, apps, websites, productivity, time spent
 - task_insights: READ-ONLY task analytics / planning — what should I work on next, how many tasks, completion rate, stale/old tasks, workload by project, task progress (no create/delete/edit)
+- knowledge: questions answered from the TEXT of work items / comments / sprint goals — "summarize the auth bug", "what blockers were discussed", "what did we decide on X", "context behind this ticket"
 - tasks: task ACTIONS (create/delete/update/rename) and general task/project/todo/sprint requests
 - general: greetings, app help, anything else
 
@@ -48,7 +49,7 @@ Available tools:
 
 ## Output schema (JSON only)
 {
-  "intent": "digest|report|productivity|task_insights|tasks|general",
+  "intent": "digest|report|productivity|task_insights|knowledge|tasks|general",
   "confidence": 0.0,
   "tool": "create_task|delete_task|update_task_status|rename_task|none",
   "args": {},

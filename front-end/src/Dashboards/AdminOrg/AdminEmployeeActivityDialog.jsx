@@ -22,7 +22,10 @@ import {
   TextField,
   Typography,
   Paper,
+  IconButton,
 } from "@mui/material";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import { format } from "date-fns";
 import { api } from "../../api/client";
 import { applyDateFilter } from "../EmployeeDBComponent/AppDataProvider";
@@ -49,6 +52,16 @@ export default function AdminEmployeeActivityDialog({ open, onClose, employee })
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [expanded, setExpanded] = useState(() => new Set());
+
+  const toggleGroup = useCallback((app) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(app)) next.delete(app);
+      else next.add(app);
+      return next;
+    });
+  }, []);
 
   const load = useCallback(async () => {
     if (!employee?.id) return;
@@ -108,6 +121,32 @@ export default function AdminEmployeeActivityDialog({ open, onClose, employee })
       return (Number(b.duration) || 0) - (Number(a.duration) || 0);
     });
   }, [filtered, kindFilter]);
+
+  // Collapse all rows of the same app into one expandable group. The different
+  // windows / files / sites for that app live inside and reveal on click.
+  const grouped = useMemo(() => {
+    const map = new Map();
+    for (const r of sortedRows) {
+      const key = r.applicationname || "Unknown";
+      let g = map.get(key);
+      if (!g) {
+        g = { app: key, total: 0, workSeconds: 0, otherSeconds: 0, items: [], latestDate: r.date };
+        map.set(key, g);
+      }
+      const d = Number(r.duration) || 0;
+      g.total += d;
+      if (isWorkRelatedCategory(r.category)) g.workSeconds += d;
+      else g.otherSeconds += d;
+      g.items.push(r);
+      if (new Date(r.date).getTime() > new Date(g.latestDate).getTime()) g.latestDate = r.date;
+    }
+    const arr = Array.from(map.values());
+    arr.forEach((g) =>
+      g.items.sort((a, b) => (Number(b.duration) || 0) - (Number(a.duration) || 0))
+    );
+    arr.sort((a, b) => b.total - a.total);
+    return arr;
+  }, [sortedRows]);
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg" aria-labelledby="admin-activity-title">
@@ -206,6 +245,7 @@ export default function AdminEmployeeActivityDialog({ open, onClose, employee })
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
+                  <TableCell sx={{ width: 48 }} />
                   <TableCell>App / browser</TableCell>
                   <TableCell>Window / site</TableCell>
                   <TableCell>Category</TableCell>
@@ -215,9 +255,9 @@ export default function AdminEmployeeActivityDialog({ open, onClose, employee })
                 </TableRow>
               </TableHead>
               <TableBody>
-                {sortedRows.length === 0 ? (
+                {grouped.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6}>
+                    <TableCell colSpan={7}>
                       <Typography color="text.secondary" variant="body2">
                         {filtered.length === 0
                           ? "No usage rows for this period. The employee needs the desktop tracker running on Windows with data synced to this server."
@@ -228,16 +268,74 @@ export default function AdminEmployeeActivityDialog({ open, onClose, employee })
                     </TableCell>
                   </TableRow>
                 ) : (
-                  sortedRows.map((row, index) => (
-                    <TableRow key={`${row.applicationname}-${row.task}-${row.date}-${index}`} hover>
-                      <TableCell>{row.applicationname}</TableCell>
-                      <TableCell sx={{ maxWidth: 280, wordBreak: "break-word" }}>{row.task}</TableCell>
-                      <TableCell>{row.category}</TableCell>
-                      <TableCell>{isWorkRelatedCategory(row.category) ? "Yes" : "No"}</TableCell>
-                      <TableCell>{formatDuration(row.duration)}</TableCell>
-                      <TableCell>{row.date}</TableCell>
-                    </TableRow>
-                  ))
+                  grouped.map((g) => {
+                    const isOpen = expanded.has(g.app);
+                    const workRel =
+                      g.workSeconds > 0 && g.otherSeconds > 0
+                        ? "Mixed"
+                        : g.workSeconds > 0
+                          ? "Yes"
+                          : "No";
+                    return (
+                      <React.Fragment key={g.app}>
+                        <TableRow
+                          hover
+                          onClick={() => toggleGroup(g.app)}
+                          sx={{
+                            cursor: "pointer",
+                            "& > *": { borderBottom: isOpen ? "unset" : undefined },
+                          }}
+                        >
+                          <TableCell>
+                            <IconButton
+                              size="small"
+                              aria-label={isOpen ? "Collapse" : "Expand"}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleGroup(g.app);
+                              }}
+                            >
+                              {isOpen ? <KeyboardArrowDownIcon fontSize="small" /> : <KeyboardArrowRightIcon fontSize="small" />}
+                            </IconButton>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" fontWeight={700}>
+                              {g.app}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption" color="text.secondary">
+                              {g.items.length} window{g.items.length > 1 ? "s" : ""}
+                            </Typography>
+                          </TableCell>
+                          <TableCell sx={{ color: "text.disabled" }}>—</TableCell>
+                          <TableCell>{workRel}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{formatDuration(g.total)}</TableCell>
+                          <TableCell>{g.latestDate}</TableCell>
+                        </TableRow>
+                        {isOpen &&
+                          g.items.map((row, index) => (
+                            <TableRow
+                              key={`${g.app}-${row.task}-${row.date}-${index}`}
+                              sx={{
+                                bgcolor: (t) =>
+                                  t.palette.mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+                              }}
+                            >
+                              <TableCell />
+                              <TableCell />
+                              <TableCell sx={{ maxWidth: 280, wordBreak: "break-word", pl: 3 }}>
+                                {row.task}
+                              </TableCell>
+                              <TableCell>{row.category}</TableCell>
+                              <TableCell>{isWorkRelatedCategory(row.category) ? "Yes" : "No"}</TableCell>
+                              <TableCell>{formatDuration(row.duration)}</TableCell>
+                              <TableCell>{row.date}</TableCell>
+                            </TableRow>
+                          ))}
+                      </React.Fragment>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

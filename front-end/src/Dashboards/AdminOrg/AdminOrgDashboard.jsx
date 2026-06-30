@@ -47,6 +47,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import DataCollectionMui from "../../components/DataCollectionMui";
 import TrackingDisclosureDialog from "../../components/TrackingDisclosureDialog";
 import AdminEmployeeActivityDialog from "./AdminEmployeeActivityDialog";
+import AdminOverviewCharts from "./AdminOverviewCharts";
 import AnalyticsOutlinedIcon from "@mui/icons-material/AnalyticsOutlined";
 import { api } from "../../api/client";
 import { useSession } from "../../context/SessionContext";
@@ -54,7 +55,8 @@ import { useSession } from "../../context/SessionContext";
 const DRAWER_W = 280;
 const SIDEBAR_BG = "#0b1220";
 const SIDEBAR_ACCENT = "#f59e0b";
-const MAIN_BG = "#f1f5f9";
+const MAIN_BG = (t) => (t.palette.mode === "dark" ? t.palette.background.default : "#f1f5f9");
+const HEAD_BG = (t) => (t.palette.mode === "dark" ? "rgba(148,163,184,0.16)" : "#e2e8f0");
 
 const NAV = [
   { id: "overview", label: "Overview", icon: DashboardCustomizeIcon },
@@ -315,7 +317,7 @@ export default function AdminOrgDashboard() {
   );
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: MAIN_BG }}>
+    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: MAIN_BG, color: "text.primary" }}>
       <AdminEmployeeActivityDialog
         open={Boolean(activityEmployee)}
         onClose={() => setActivityEmployee(null)}
@@ -336,7 +338,7 @@ export default function AdminOrgDashboard() {
       <Box component="main" sx={{ flex: 1, p: 3, minWidth: 0 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 2 }}>
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: "#0f172a" }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary" }}>
               {NAV.find((n) => n.id === section)?.label}
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -390,11 +392,13 @@ export default function AdminOrgDashboard() {
           </Stack>
         )}
 
+        {section === "overview" && <AdminOverviewCharts />}
+
         {section === "people" && (
           <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ bgcolor: "#e2e8f0" }}>
+                <TableRow sx={{ "& th": { bgcolor: HEAD_BG, fontWeight: 700, color: "text.primary" } }}>
                   <TableCell>ID</TableCell>
                   <TableCell>Name</TableCell>
                   <TableCell>Email</TableCell>
@@ -417,7 +421,7 @@ export default function AdminOrgDashboard() {
                         variant="outlined"
                         startIcon={<AnalyticsOutlinedIcon fontSize="small" />}
                         onClick={() => setActivityEmployee(row)}
-                        sx={{ textTransform: "none", borderColor: "#cbd5e1", color: "#0f172a" }}
+                        sx={{ textTransform: "none", borderColor: "divider", color: "text.primary" }}
                       >
                         View work vs other
                       </Button>
@@ -437,7 +441,7 @@ export default function AdminOrgDashboard() {
             <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "#e2e8f0" }}>
+                  <TableRow sx={{ "& th": { bgcolor: HEAD_BG, fontWeight: 700, color: "text.primary" } }}>
                     <TableCell>Name</TableCell>
                     <TableCell>Lead</TableCell>
                     <TableCell>Manager</TableCell>
@@ -490,7 +494,7 @@ export default function AdminOrgDashboard() {
             <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "#e2e8f0" }}>
+                  <TableRow sx={{ "& th": { bgcolor: HEAD_BG, fontWeight: 700, color: "text.primary" } }}>
                     <TableCell>Title</TableCell>
                     <TableCell>Project</TableCell>
                     <TableCell>Assignee</TableCell>

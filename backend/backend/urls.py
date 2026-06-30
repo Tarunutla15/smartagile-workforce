@@ -21,5 +21,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('smartagile.urls')),
     path('taskapi/',include('tasks.urls')),
+    path('sprintapi/', include('sprints.urls')),
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

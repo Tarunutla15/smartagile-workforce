@@ -15,11 +15,14 @@ from __future__ import annotations
 import logging
 import queue
 import time
+import uuid
 from datetime import datetime, timezone
+
+import auth_store
 
 from ..plugins.base import Enrichment, RawWindow
 from ..plugins.registry import PluginManager
-from . import idle_tracker
+from . import idle_tracker, ignore
 from .classifier import Classifier
 from .input_tracker import InputTracker
 from .uploader import Uploader
@@ -84,6 +87,9 @@ class TrackingEngine:
         ks, cl, sc = self.input_tracker.snapshot_and_reset()  # always reset (don't bleed)
         if effective < idle_tracker.MIN_SEGMENT_SEC:
             return
+        # System / shell / lock-screen surfaces are not real usage -- drop (treat as away).
+        if ignore.should_ignore(raw.exe_path, raw.window_title):
+            return
 
         source_type, enr = self._safe_enrich(raw, plugin)
         occurred_iso = (
@@ -102,6 +108,13 @@ class TrackingEngine:
             "clicks": float(cl),
             "scrolls": float(sc),
             "occurred_at": occurred_iso,
+            # Stable per-segment id so a retried upload is idempotent server-side
+            # (the backend de-dupes on (user, client_event_id)).
+            "client_event_id": uuid.uuid4().hex,
+            # Capture-time account: lets the uploader refuse to send this segment under a
+            # different user if the PC is re-paired to another account before it flushes.
+            # (Internal key; stripped before the request and ignored by the server anyway.)
+            "_paired_user_id": auth_store.get_paired_user_id(),
         }
         # Optional extras (URL/domain). The ingest endpoint ignores unknown keys, so this
         # is forward-compatible without a backend migration.
@@ -133,30 +146,42 @@ class TrackingEngine:
 
         try:
             while self._running:
+                # Per-iteration guard: a transient error (COM hiccup, plugin edge case, a
+                # bad foreground read) must never kill the tracking thread. Log and keep going.
                 try:
-                    self.window_tracker.foreground_queue.get(
-                        timeout=self._wait_timeout(previous_raw, start_time)
-                    )
-                except queue.Empty:
-                    pass
-                self.window_tracker.drain()
+                    try:
+                        self.window_tracker.foreground_queue.get(
+                            timeout=self._wait_timeout(previous_raw, start_time)
+                        )
+                    except queue.Empty:
+                        pass
+                    self.window_tracker.drain()
 
-                raw = self.window_tracker.read()
-                plugin = self.registry.match(raw) if raw is not None else None
-                current_key = self._stable_key(raw, plugin)
+                    raw = self.window_tracker.read()
+                    plugin = self.registry.match(raw) if raw is not None else None
+                    current_key = self._stable_key(raw, plugin)
 
-                if current_key != previous_key:
-                    if previous_raw is not None:
+                    if current_key != previous_key:
+                        if previous_raw is not None:
+                            self._flush_segment(previous_raw, previous_plugin, start_time)
+                        previous_raw = raw
+                        previous_plugin = plugin
+                        previous_key = current_key
+                        start_time = time.time()
+                    elif previous_raw is not None and (time.time() - start_time) >= idle_tracker.PERIODIC_FLUSH_SEC:
                         self._flush_segment(previous_raw, previous_plugin, start_time)
-                    previous_raw = raw
-                    previous_plugin = plugin
-                    previous_key = current_key
+                        # Always advance so sustained idle does not keep growing one segment.
+                        start_time = time.time()
+                except Exception as exc:  # noqa: BLE001
+                    logger.exception("tracking iteration error (continuing): %s", exc)
+                    # Reset the segment so a half-built one is not mis-attributed, and avoid
+                    # a tight error loop.
+                    previous_raw = None
+                    previous_plugin = None
+                    previous_key = None
                     start_time = time.time()
-                elif previous_raw is not None and (time.time() - start_time) >= idle_tracker.PERIODIC_FLUSH_SEC:
-                    self._flush_segment(previous_raw, previous_plugin, start_time)
-                    # Always advance so sustained idle does not keep growing one segment.
-                    start_time = time.time()
-        except Exception as exc:  # noqa: BLE001
+                    time.sleep(0.5)
+        except Exception as exc:  # noqa: BLE001 — should be unreachable now; last-resort log
             logger.exception("Tracking loop crashed: %s", exc)
         finally:
             self.input_tracker.stop()

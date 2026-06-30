@@ -35,7 +35,11 @@ _URL_LIKE_RE = re.compile(r"^[a-z][a-z0-9+.\-]*://|^[\w\-]+\.[\w\-.]+", re.IGNOR
 
 
 def is_enabled() -> bool:
-    return str(os.environ.get("SMARTAGILE_BROWSER_URL", "")).strip().lower() in ("1", "true", "yes", "on")
+    """On by default; only an explicit off-value disables URL capture."""
+    raw = os.environ.get("SMARTAGILE_BROWSER_URL")
+    if raw is None or not str(raw).strip():
+        return True
+    return str(raw).strip().lower() not in ("0", "false", "no", "off")
 
 
 def _load_uia():

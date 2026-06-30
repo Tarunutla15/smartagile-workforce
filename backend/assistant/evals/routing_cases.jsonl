@@ -1,0 +1,28 @@
+{"message": "start sprint Alpha", "expect_intent": "sprint"}
+{"message": "show me the burndown chart", "expect_intent": "sprint"}
+{"message": "who is in my team and what are they working on", "expect_intent": "sprint"}
+{"message": "list the sprints", "expect_intent": "sprint"}
+{"message": "how is the current sprint going", "expect_intent": "sprint"}
+{"message": "email me a usage report", "expect_intent": "report"}
+{"message": "share my activity summary with my manager", "expect_intent": "report"}
+{"message": "set up a weekly digest", "expect_intent": "digest"}
+{"message": "send me a daily digest every day", "expect_intent": "digest"}
+{"message": "turn off my digest", "expect_intent": "digest"}
+{"message": "what should I work on next", "expect_intent": "task_insights"}
+{"message": "how many tasks do I have", "expect_intent": "task_insights"}
+{"message": "what is my completion rate", "expect_intent": "task_insights"}
+{"message": "create a task buy milk", "expect_intent": "tasks"}
+{"message": "delete that task", "expect_intent": "tasks"}
+{"message": "assign this to the backlog", "expect_intent": "tasks"}
+{"message": "what is my focus score today", "expect_intent": "productivity"}
+{"message": "which app did I use most", "expect_intent": "productivity"}
+{"message": "how much time did I spend on websites", "expect_intent": "productivity"}
+{"message": "what is the current project we are working on", "expect_intent": "sprint"}
+{"message": "which project am I working on", "expect_intent": "sprint"}
+{"message": "list the employees", "expect_intent": "sprint"}
+{"message": "summarize the discussion on the login bug", "expect_intent": "knowledge"}
+{"message": "what blockers were discussed in the sprint", "expect_intent": "knowledge"}
+{"message": "what was decided on the auth story", "expect_intent": "knowledge"}
+{"message": "summarize the comments on the deploy task", "expect_intent": "knowledge"}
+{"message": "hello there", "expect_intent": "general"}
+{"message": "thanks, that's all", "expect_intent": "general"}
