@@ -67,7 +67,7 @@ _TEAM_RE = re.compile(
     r"|\b(?:list|show|see|view|who(?:'s| is| are)?)\s+(?:the\s+|all\s+|my\s+|our\s+)?"
     r"(?:employees?|members?|people|teammates?|developers?|devs|staff)\b"
     r"|\bwho(?:'s| is| are)\s+(?:in|on|working|doing)\b"
-    r"|\bwho\s+else\b",
+    r"|\bwho\s+else\b|\beveryone\b|\beach\s+(?:member|person)\b",
     re.IGNORECASE,
 )
 
@@ -171,19 +171,54 @@ Schema:
   "move_to": "backlog"|string|null  // target sprint name or "backlog" (move_item / complete_sprint unfinished)
 }
 
-Rules:
-- "create a sprint called X" -> create_sprint, sprint="X".
-- "start/begin the sprint" -> start_sprint. "complete/finish/close the sprint" -> complete_sprint.
-- "add a task/story 'X' to sprint Y" -> add_item, title="X", sprint="Y". If they say backlog, sprint=null and move_to="backlog".
-- "move 'X' to backlog/sprint Y" -> move_item, title="X", move_to.
-- "mark 'X' as done / in progress / todo" -> set_status with status.
-- "list/show the tasks/items in the sprint", "what tasks are in the sprint", "pending/open/remaining tasks", "tasks assigned to me", "my tasks", "what's left" -> list_items. Set status_filter ("pending" for open/remaining/incomplete/not done; "done" for completed; "inProgress" for in-progress) and assignee ("me" when they say my/me/assigned to me, else "all").
-- "sprint status / overview / how's the sprint going / completion / progress %" -> status. "burndown" -> burndown.
-- "list/show sprints" -> list_sprints.
-- "who is in my team", "what is my team / are my teammates working on", "team workload/roster" -> team.
-- "what is the current project", "which project am I working on", "my/our projects", "what projects are we working on" -> projects.
-- Anything unclear about sprints -> help.
-Only include fields you are confident about; use null otherwise."""
+Functions (choose exactly one "action"):
+- create_sprint   — make a new sprint.
+- start_sprint    — activate a sprint.
+- complete_sprint — close a sprint; set move_to="backlog" or a sprint name to move unfinished items.
+- add_item        — add a work item (task/story/bug/chore/spike) to a sprint or the backlog.
+- move_item       — move ONE work item between a sprint and the backlog (or another sprint).
+- set_status      — change ONE work item's status (todo/inProgress/done).
+- status          — a sprint's progress: completion %, items/points done, focus time.
+- burndown        — a sprint's burndown trend / chart.
+- list_items      — list work items in a sprint (optionally filtered by status and/or assignee).
+- list_sprints    — list sprints (optionally for one project).
+- team            — who is on the team and what each person is working on (roster / workload).
+- projects        — which project(s) the user is on and each one's active sprint.
+- help            — sprint-related but unclear.
+
+Perspective:
+- The message may start with "Perspective: me|team|project". With "me", prefer assignee="me" for list_items. With "team"/"project", listings cover the whole team (assignee="all") unless the user explicitly says my/mine/assigned to me.
+- Anyone (employee, lead, manager, admin, stakeholder) may ask anything. Do NOT refuse based on role — the server enforces permissions afterwards. Your only job is to classify the intent and extract fields.
+
+Disambiguation:
+- "complete/finish/close the sprint AND move unfinished to the backlog" is ONE complete_sprint (move_to="backlog") — NOT move_item.
+- Quoted text is a work-item or sprint title; prefer it.
+- list_items status_filter: open/remaining/incomplete/not done/pending -> "pending"; completed/finished/done -> "done"; in progress/ongoing/wip -> "inProgress"; otherwise "all".
+- "current/which/my/our project(s)" -> projects. "who/team/teammates/employees/staff/members/everyone" -> team.
+- Only include fields you are confident about; use null otherwise.
+
+Examples (message -> JSON):
+- "create a sprint called Sprint 7 in Apollo with goal stabilize auth" -> {"action":"create_sprint","sprint":"Sprint 7","project":"Apollo","goal":"stabilize auth"}
+- "start the sprint" -> {"action":"start_sprint"}
+- "finish the sprint and push leftovers to the backlog" -> {"action":"complete_sprint","move_to":"backlog"}
+- "add a story 'Payment gateway' worth 5 points to Sprint 7" -> {"action":"add_item","title":"Payment gateway","item_type":"story","story_points":5,"sprint":"Sprint 7"}
+- "log a bug 'Login 500' in the backlog" -> {"action":"add_item","title":"Login 500","item_type":"bug","move_to":"backlog"}
+- "move 'Payment gateway' to the backlog" -> {"action":"move_item","title":"Payment gateway","move_to":"backlog"}
+- "mark 'Login page' as done" -> {"action":"set_status","title":"Login page","status":"done"}
+- "I finished the onboarding screen" -> {"action":"set_status","title":"onboarding screen","status":"done"}
+- "how is the sprint going" -> {"action":"status"}
+- "how far along is Sprint 7" -> {"action":"status","sprint":"Sprint 7"}
+- "what's the progress on the Website project" -> {"action":"status","project":"Website"}
+- "show the burndown" -> {"action":"burndown"}
+- "what are my open tasks this sprint" -> {"action":"list_items","assignee":"me","status_filter":"pending"}
+- "what's been completed this sprint" -> {"action":"list_items","status_filter":"done"}
+- "what is everyone working on" -> {"action":"team"}
+- "who has open work on the team" -> {"action":"team"}
+- "list the employees" -> {"action":"team"}
+- "list all sprints" -> {"action":"list_sprints"}
+- "show sprints in Apollo" -> {"action":"list_sprints","project":"Apollo"}
+- "what project am I working on" -> {"action":"projects"}
+- "what projects do we have" -> {"action":"projects"}"""
 
 
 def _parse_plan_json(content: str) -> dict[str, Any] | None:
@@ -203,11 +238,15 @@ def _parse_plan_json(content: str) -> dict[str, Any] | None:
     return o
 
 
-def _llm_plan(user_text: str, recent_text: str) -> dict[str, Any] | None:
+def _llm_plan(user_text: str, recent_text: str, scope: str | None = None) -> dict[str, Any] | None:
     try:
-        human = user_text or ""
+        parts = []
+        if scope in ("me", "team", "project"):
+            parts.append(f"Perspective: {scope}")
         if recent_text:
-            human = f"Recent conversation:\n{recent_text}\n\nLatest message:\n{user_text}"
+            parts.append(f"Recent conversation:\n{recent_text}")
+        parts.append(f"Latest message:\n{user_text or ''}")
+        human = "\n\n".join(parts)
         raw, _ = invoke_system_human_resilient(_PLANNER_SYSTEM, human)
         return _parse_plan_json(raw)
     except Exception:  # pragma: no cover
@@ -316,11 +355,13 @@ def _rule_plan(user_text: str) -> dict[str, Any]:
     return plan
 
 
-def plan_sprint_action(user_text: str, recent_text: str = "") -> dict[str, Any]:
+def plan_sprint_action(
+    user_text: str, recent_text: str = "", scope: str | None = None
+) -> dict[str, Any]:
     """LLM planner (when configured) merged with the deterministic rule planner."""
     rule = _rule_plan(user_text)
     if is_llm_configured():
-        llm = _llm_plan(user_text, recent_text)
+        llm = _llm_plan(user_text, recent_text, scope=scope)
         if llm:
             # Prefer the LLM's action/args, but backfill from rules where the LLM left blanks.
             merged = {**rule, **{k: v for k, v in llm.items() if v not in (None, "")}}
@@ -357,7 +398,9 @@ def _split_clauses(text: str) -> list[str]:
     return [c for c in (p.strip(" ?.!\t") for p in _CLAUSE_SPLIT_RE.split(text or "")) if c]
 
 
-def plan_sprint_actions(user_text: str, recent_text: str = "") -> list[dict[str, Any]]:
+def plan_sprint_actions(
+    user_text: str, recent_text: str = "", scope: str | None = None
+) -> list[dict[str, Any]]:
     """
     Plan one OR MORE sprint actions for a single message.
 
@@ -366,7 +409,7 @@ def plan_sprint_actions(user_text: str, recent_text: str = "") -> list[dict[str,
     ("summarize the sprint and list the employees"), we split on conjunctions and return
     a plan per distinct, compound-safe action so the caller can answer every part.
     """
-    primary = plan_sprint_action(user_text, recent_text)
+    primary = plan_sprint_action(user_text, recent_text, scope=scope)
     clauses = _split_clauses(user_text)
     if len(clauses) < 2:
         return [primary]
@@ -1029,7 +1072,7 @@ def handle_sprint(
     Never raises: on any unexpected error it returns a friendly help message.
     """
     try:
-        plans = plan_sprint_actions(user_text, recent_text)
+        plans = plan_sprint_actions(user_text, recent_text, scope=scope)
 
         chosen_name: str | None = None
         if project_id:

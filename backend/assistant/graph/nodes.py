@@ -107,8 +107,10 @@ def classify_node(user: Any, state: AgentState) -> dict[str, Any]:  # noqa: ARG0
     scope = (state or {}).get("scope") or "auto"
     route = route_message(user_text, recent_messages=recent)
     intent = (route or {}).get("intent") or "general"
-    # Deterministic overrides (checked most-specific first):
-    # a recurring-digest request must NOT be treated as a one-off emailed report.
+    # The LLM router (router.py prompt) is the primary intent classifier and now natively
+    # understands `sprint` (board / team / project / work items). The deterministic checks
+    # below are a cheap SAFETY NET + offline fallback (no-LLM mode) for the common cases —
+    # they only UPGRADE a vague/wrong route, never downgrade a confident specific one.
     if wants_recurring_digest(user_text):
         intent = "digest"
         route = {**(route or {}), "intent": "digest"}
@@ -135,9 +137,14 @@ def classify_node(user: Any, state: AgentState) -> dict[str, Any]:  # noqa: ARG0
         # (a manager view) — handle them with the sprint skill, not the personal agent.
         intent = "sprint"
         route = {**(route or {}), "intent": "sprint"}
-    elif wants_task_insights(user_text) and (route or {}).get("tool", "none") == "none":
-        # Read-only task analytics: only when the router did NOT plan a task ACTION
-        # (create/delete/update/rename), so genuine actions still flow to the tasks agent.
+    elif (
+        wants_task_insights(user_text)
+        and intent in ("tasks", "general", "productivity")
+        and (route or {}).get("tool", "none") == "none"
+    ):
+        # Read-only task analytics: only upgrade a vague route (tasks/general/productivity),
+        # never steal a confident sprint/knowledge/report/digest decision, and only when the
+        # router did NOT plan a task ACTION (so genuine create/delete/etc. still flow to tasks).
         intent = "task_insights"
         route = {**(route or {}), "intent": "task_insights"}
     return {"intent": intent, "route": route}

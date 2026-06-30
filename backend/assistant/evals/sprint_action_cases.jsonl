@@ -8,4 +8,10 @@
 {"message": "list the sprints", "expect_action": "list_sprints"}
 {"message": "what tasks are assigned to me", "expect_action": "list_items"}
 {"message": "who is in my team", "expect_action": "team"}
+{"message": "what is everyone working on", "expect_action": "team"}
+{"message": "list the employees", "expect_action": "team"}
+{"message": "what project am I working on", "expect_action": "projects"}
+{"message": "what projects do we have", "expect_action": "projects"}
+{"message": "show sprints in Apollo", "expect_action": "list_sprints"}
+{"message": "what are my open tasks this sprint", "expect_action": "list_items"}
 {"message": "how is the sprint going", "expect_action": "status"}
